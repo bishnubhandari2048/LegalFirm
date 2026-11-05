@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>मुद्दा फाइल विवरण | Case File Dossier - {{ case.case_number }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; padding: 0 !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen py-8 px-4 font-sans text-slate-900">
+  <div class="max-w-4xl mx-auto mb-4 flex justify-between items-center no-print">
+    <a href="javascript:window.close()" class="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-medium">← बन्द गर्नुहोस् (Close)</a>
+    <button onclick="window.print()" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-bold shadow">
+      🖨️ मुद्दाको पूर्ण रिपोर्ट प्रिन्ट गर्नुहोस् (Print Case Dossier)
+    </button>
+  </div>
+
+  <div class="max-w-4xl mx-auto bg-white border border-slate-300 rounded-xl p-8 shadow">
+    <div class="flex justify-between items-start border-b-2 border-slate-800 pb-4 mb-6">
+      <div>
+        <h1 class="text-2xl font-extrabold text-slate-900">⚖️ विधि ल फर्म — मुद्दाको पूर्ण विवरण फाइल (Case File Dossier)</h1>
+        <p class="text-sm text-slate-600 mt-1">मुद्दा शीर्षक: <strong>{{ case.case_title }}</strong></p>
+      </div>
+      <div class="text-right">
+        <div class="text-sm font-bold bg-slate-900 text-amber-400 px-3 py-1 rounded">मुद्दा नं.: {{ case.case_number }}</div>
+        <div class="text-xs text-slate-600 mt-1">दर्ता मिति: {{ case.registration_date_bs }} (वि.सं.)</div>
+        <div class="text-xs font-semibold text-blue-700 mt-0.5">अवस्था: {{ case.status }}</div>
+      </div>
+    </div>
+
+    <!-- 1. क्लाइन्ट र मुद्दा विवरण -->
+    <div class="grid grid-cols-2 gap-6 mb-6 text-sm">
+      <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+        <h2 class="font-bold text-slate-800 border-b border-slate-300 pb-1.5 mb-2">१. क्लाइन्टको विवरण (Client Details)</h2>
+        <p><span class="text-slate-500">नाम, थर:</span> <strong>{{ case.client_name }}</strong> ({{ case.client_party_role }})</p>
+        <p><span class="text-slate-500">ठेगाना:</span> {{ case.client_address }}</p>
+        <p><span class="text-slate-500">सम्पर्क नम्बर:</span> {{ case.client_phone }}</p>
+        <p><span class="text-slate-500">नागरिकता नं.:</span> {{ case.client_citizenship }}</p>
+      </div>
+      <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+        <h2 class="font-bold text-slate-800 border-b border-slate-300 pb-1.5 mb-2">२. मुद्दा तथा विपक्षीको विवरण (Case & Opponent)</h2>
+        <p><span class="text-slate-500">अदालतको नाम:</span> <strong>{{ case.court_name }}</strong> ({{ case.bench_section or '-' }})</p>
+        <p><span class="text-slate-500">मुद्दाको प्रकार:</span> <strong>{{ case.case_type }}</strong></p>
+        <p><span class="text-slate-500">विपक्षीको नाम:</span> <strong>{{ case.opponent_name }}</strong></p>
+        <p><span class="text-slate-500">विपक्षीको ठेगाना/वकिल:</span> {{ case.opponent_address or '-' }} / {{ case.opponent_counsel or '-' }}</p>
+      </div>
+    </div>
+
+    <!-- 2. वकिल र आर्थिक विवरण -->
+    <div class="grid grid-cols-2 gap-6 mb-6 text-sm">
+      <div class="border border-slate-200 rounded-lg p-4">
+        <h2 class="font-bold text-slate-800 border-b border-slate-200 pb-1.5 mb-2">३. जिम्मेवार वकिल तथा कर्मचारी (Legal Team)</h2>
+        <p><span class="text-slate-500">जिम्मेवार अधिवक्ता:</span> <strong>{{ case.advocate_name }}</strong> ({{ case.advocate_phone }})</p>
+        <p><span class="text-slate-500">सहायक कर्मचारी:</span> {{ case.assistant_name }} ({{ case.assistant_phone }})</p>
+        <p><span class="text-slate-500">वारेसको नाम:</span> {{ case.waris_name or '-' }}</p>
+        <p><span class="text-slate-500">अर्को पेशी मिति:</span> <strong class="text-amber-700">{{ case.next_hearing_date_bs or '-' }}</strong></p>
+      </div>
+      <div class="border border-slate-200 rounded-lg p-4">
+        <h2 class="font-bold text-slate-800 border-b border-slate-200 pb-1.5 mb-2">४. आर्थिक विवरण (Financial Summary)</h2>
+        <p><span class="text-slate-500">सहमति भएको शुल्क (Deal Amount):</span> <strong>रु. {{ "{:,.2f}".format(case.deal_amount) }}</strong></p>
+        <p><span class="text-slate-500">प्राप्त रकम (Paid Amount):</span> <strong class="text-emerald-700">रु. {{ "{:,.2f}".format(case.paid_amount) }}</strong></p>
+        <p><span class="text-slate-500">बाँकी रकम (Due Amount):</span> <strong class="text-rose-700">रु. {{ "{:,.2f}".format(case.due_amount) }}</strong></p>
+      </div>
+    </div>
+
+    {% if case.summary %}
+    <div class="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+      <strong>मुद्दाको संक्षिप्त व्यहोरा / मागदाबी:</strong> {{ case.summary }}
+    </div>
+    {% endif %}
+
+    <!-- 3. पेशी विवरण -->
+    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-700 mb-2">५. पेशी विवरण (Hearing / Peshi History)</h3>
+    <table class="w-full border-collapse border border-slate-300 text-xs mb-6">
+      <thead class="bg-slate-800 text-white">
+        <tr>
+          <th class="border p-2 text-left">पेशी मिति (वि.सं.)</th>
+          <th class="border p-2 text-left">पेशीको अवस्था</th>
+          <th class="border p-2 text-left">इजलास / न्यायाधीश</th>
+          <th class="border p-2 text-left">पेशीको नतिजा / आदेश</th>
+          <th class="border p-2 text-left">अर्को पेशी मिति</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in case.hearings %}
+        <tr>
+          <td class="border p-2 font-bold">{{ h.hearing_date_bs }}</td>
+          <td class="border p-2">{{ h.hearing_status }}</td>
+          <td class="border p-2">{{ h.bench_or_judge }}</td>
+          <td class="border p-2">{{ h.outcome }}</td>
+          <td class="border p-2 font-semibold">{{ h.next_hearing_date_bs }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="border p-3 text-center text-slate-400">कुनै पेशी अभिलेख छैन</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- 4. कागजात सम्बन्धी विवरण -->
+    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-700 mb-2">६. कागजात सम्बन्धी विवरण (Documents Checklist)</h3>
+    <table class="w-full border-collapse border border-slate-300 text-xs">
+      <thead class="bg-slate-800 text-white">
+        <tr>
+          <th class="border p-2 text-left">कागजातको नाम</th>
+          <th class="border p-2 text-left">मूल वा प्रतिलिपि</th>
+          <th class="border p-2 text-left">अवस्था</th>
+          <th class="border p-2 text-left">बुझाएको मिति</th>
+          <th class="border p-2 text-left">फिर्ता मिति</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in case.documents %}
+        <tr>
+          <td class="border p-2 font-medium">{{ d.document_name }}</td>
+          <td class="border p-2">{{ d.document_type }}</td>
+          <td class="border p-2">{{ d.status }}</td>
+          <td class="border p-2">{{ d.received_date_bs }}</td>
+          <td class="border p-2">{{ d.returned_date_bs or '-' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="border p-3 text-center text-slate-400">कुनै कागजात अभिलेख छैन</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

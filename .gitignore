@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment secrets (keep .env.production.example tracked)
+.env
+.env.production
+
+# Local fallback DB and SQL dumps
+*.db
+*.sqlite3
+*.sql
+
+# Uploaded client documents (keep folder via .gitkeep)
+app/static/uploads/*
+!app/static/uploads/.gitkeep

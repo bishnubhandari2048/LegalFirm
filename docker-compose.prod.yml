@@ -1,0 +1,26 @@
+services:
+  lawfirm-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vidhi_lawfirm_app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    ports:
+      - "${APP_EXTERNAL_PORT:-8080}:8080"
+    volumes:
+      - lawfirm_uploads:/app/app/static/uploads
+    extra_hosts:
+      # Allows connecting to MySQL running on the Linux VPS host via MYSQL_HOST=host.docker.internal
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  lawfirm_uploads:
+    name: vidhi_lawfirm_uploads

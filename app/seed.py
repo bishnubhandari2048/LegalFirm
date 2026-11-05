@@ -1,0 +1,473 @@
+import logging
+from sqlalchemy.orm import Session
+from app.models import (
+    StaffMember,
+    Client,
+    LegalCase,
+    Hearing,
+    PaymentRecord,
+    CaseDocument,
+)
+from app.auth import hash_password
+from app.bs_calendar import bs_to_ad, today_bs
+
+logger = logging.getLogger("vidhicms.seed")
+
+
+def seed_initial_data(db: Session):
+    """Populate realistic Nepal Law Firm initial records if database is empty."""
+    if db.query(StaffMember).count() > 0:
+        return
+
+    logger.info("Seeding initial Law Firm data (Nepali + English)...")
+    cur_bs = today_bs()
+
+    # 1. वकिल तथा कर्मचारी विवरण (Advocates & Staff)
+    adv_ramesh = StaffMember(
+        full_name="वरिष्ठ अधिवक्ता रमेश प्रसाद शर्मा (Sr. Adv. Ramesh P. Sharma)",
+        role="admin",
+        designation="वरिष्ठ अधिवक्ता / प्रबन्ध साझेदार (Managing Partner)",
+        bar_council_no="NBC-1452",
+        specialization="संवैधानिक, देवानी, जग्गा तथा सर्वोच्च अदालत रिट (Constitutional & Civil)",
+        phone="9851023456",
+        alt_phone="01-4523890",
+        email="ramesh.sharma@vidhilaw.com.np",
+        address="अनामनगर, काठमाडौँ (Anamnagar, Kathmandu)",
+        username="admin",
+        password_hash=hash_password("admin123"),
+        is_active=True,
+        notes="प्रमुख वरिष्ठ अधिवक्ता तथा कार्यालय प्रमुख",
+    )
+    adv_sunita = StaffMember(
+        full_name="अधिवक्ता सुनिता अधिकारी (Adv. Sunita Adhikari)",
+        role="advocate",
+        designation="जिम्मेवार अधिवक्ता (Senior Associate Advocate)",
+        bar_council_no="NBC-8921",
+        specialization="अंशबण्डा, सम्बन्ध विच्छेद तथा पारिवारिक कानून (Family & Property Law)",
+        phone="9841567890",
+        email="sunita.adhikari@vidhilaw.com.np",
+        address="पाटनढोका, ललितपुर",
+        username="sunita",
+        password_hash=hash_password("lawfirm123"),
+        is_active=True,
+    )
+    adv_dipak = StaffMember(
+        full_name="अधिवक्ता दिपक राज भण्डारी (Adv. Dipak Raj Bhandari)",
+        role="advocate",
+        designation="जिम्मेवार अधिवक्ता (Corporate & Criminal Counsel)",
+        bar_council_no="NBC-11204",
+        specialization="लेनदेन, चेक अनादर, बैंकिङ कसूर तथा फौजदारी (Banking, Recovery & Criminal)",
+        phone="9801234567",
+        email="dipak.bhandari@vidhilaw.com.np",
+        address="बबरमहल, काठमाडौँ",
+        username="dipak",
+        password_hash=hash_password("lawfirm123"),
+        is_active=True,
+    )
+    staff_kamal = StaffMember(
+        full_name="कमल थापा मगर (Kamal Thapa Magar)",
+        role="staff",
+        designation="सहायक कर्मचारी / अदालती फाँट र तारेख सहयोगी (Legal Clerk)",
+        bar_council_no="",
+        specialization="अदालत दर्ता, तारेख, वारेस तथा नक्कल झिक्ने कार्य",
+        phone="9849112233",
+        email="kamal.thapa@vidhilaw.com.np",
+        address="कोटेश्वर, काठमाडौँ",
+        username="kamal",
+        password_hash=hash_password("lawfirm123"),
+        is_active=True,
+    )
+    staff_asmita = StaffMember(
+        full_name="अस्मिता गुरुङ (Asmita Gurung)",
+        role="staff",
+        designation="सहायक कर्मचारी / लेखा तथा कागजात अभिलेख (Finance & Docs Assistant)",
+        bar_council_no="",
+        specialization="रसिद, आर्थिक लेखा, क्लाइन्ट फाइल र कागजात व्यवस्थापन",
+        phone="9860998877",
+        email="asmita.gurung@vidhilaw.com.np",
+        address="नयाँ बानेश्वर, काठमाडौँ",
+        username="asmita",
+        password_hash=hash_password("lawfirm123"),
+        is_active=True,
+    )
+
+    db.add_all([adv_ramesh, adv_sunita, adv_dipak, staff_kamal, staff_asmita])
+    db.flush()
+
+    # 2. क्लाइन्टको विवरण (Clients)
+    c1 = Client(
+        first_name="हरिबहादुर",
+        last_name="श्रेष्ठ",
+        full_name="हरिबहादुर श्रेष्ठ (Hari Bahadur Shrestha)",
+        address="काठमाडौँ म.न.पा.-१०, नयाँ बानेश्वर",
+        district="काठमाडौँ",
+        phone="9851144556",
+        alt_phone="9841223344",
+        email="harishrestha@gmail.com",
+        citizenship_no="२७-०१-७१-०४५२१",
+        citizenship_district="काठमाडौँ",
+        citizenship_issue_date_bs="2071-04-12",
+        father_or_spouse_name="स्व. कृष्णबहादुर श्रेष्ठ",
+        occupation="व्यापार / घरजग्गा",
+        notes="पैतृक सम्पत्तिको अंशबण्डा र जग्गा खिचलो सम्बन्धी मुख्य क्लाइन्ट",
+    )
+    c2 = Client(
+        first_name="सीता देवी",
+        last_name="पौडेल",
+        full_name="सीता देवी पौडेल (Sita Devi Paudel)",
+        address="ललितपुर म.न.पा.-५, पुल्चोक, ललितपुर",
+        district="ललितपुर",
+        phone="9841778899",
+        email="sitapaudel.np@gmail.com",
+        citizenship_no="२५-०१-७४-०८९१२",
+        citizenship_district="ललितपुर",
+        citizenship_issue_date_bs="2074-09-05",
+        father_or_spouse_name="रामचन्द्र पौडेल",
+        occupation="शिक्षण सेवा",
+        notes="सम्बन्ध विच्छेद र अंश मानाचामल मुद्दा",
+    )
+    c3 = Client(
+        first_name="राजेश कुमार",
+        last_name="अग्रवाल",
+        full_name="राजेश कुमार अग्रवाल (Rajesh Kumar Agrawal)",
+        address="काठमाडौँ म.न.पा.-१, नक्साल (स्थायी: विराटनगर-७, मोरङ)",
+        district="काठमाडौँ",
+        phone="9802033445",
+        email="rajesh.agrawal@everesttrade.com.np",
+        citizenship_no="०५-०१-६८-११२३४",
+        citizenship_district="मोरङ",
+        citizenship_issue_date_bs="2068-02-19",
+        father_or_spouse_name="मदनलाल अग्रवाल",
+        occupation="उद्योगी / व्यवसायी",
+        notes="लेनदेन र चेक अनादर (बैंकिङ कसूर) मुद्दा",
+    )
+    c4 = Client(
+        first_name="कल्पना",
+        last_name="तामाङ",
+        full_name="कल्पना तामाङ (Kalpana Tamang)",
+        address="सूर्यविनायक न.पा.-४, भक्तपुर",
+        district="भक्तपुर",
+        phone="9861334455",
+        email="",
+        citizenship_no="२६-०१-७६-०३३१९",
+        citizenship_district="भक्तपुर",
+        citizenship_issue_date_bs="2076-11-22",
+        father_or_spouse_name="सोमबहादुर तामाङ",
+        occupation="कृषि तथा साना व्यवसाय",
+        notes="जग्गा जालसाजी र लिखत बदर मुद्दा",
+    )
+
+    db.add_all([c1, c2, c3, c4])
+    db.flush()
+
+    # 3. मुद्दाको विवरण (Legal Cases)
+    case1 = LegalCase(
+        case_number="०८२-CP-०४१२",
+        filing_number="दर्ता नं. १२८९/०८२",
+        case_title="हरिबहादुर श्रेष्ठ विरुद्ध श्यामबहादुर श्रेष्ठ समेत",
+        court_name="काठमाडौँ जिल्ला अदालत (Kathmandu District Court)",
+        bench_section="फाँट नं. ५ (देवानी)",
+        case_type="अंशबण्डा (Partition of Property)",
+        client_id=c1.id,
+        client_party_role="वादी (Plaintiff)",
+        opponent_name="श्यामबहादुर श्रेष्ठ र राममाया श्रेष्ठ",
+        opponent_address="काठमाडौँ म.न.पा.-१०, बानेश्वर",
+        opponent_contact="9841098765",
+        opponent_counsel="अधिवक्ता विनोद कार्की",
+        registration_date_bs="2082-08-14",
+        registration_date_ad=bs_to_ad("2082-08-14"),
+        status="तारेखमा / विचाराधीन (Active)",
+        deal_amount=150000.0,
+        paid_amount=90000.0,
+        due_amount=60000.0,
+        advocate_id=adv_ramesh.id,
+        assistant_id=staff_kamal.id,
+        waris_name="कमल थापा मगर",
+        next_hearing_date_bs=cur_bs,
+        next_hearing_date_ad=bs_to_ad(cur_bs),
+        summary="सगोलको काठमाडौँ कि.नं. ४१२ र ४१५ को घरजग्गा र बैंक मौज्दात ३ भाग लगाई १ भाग अंश छुट्याई पाऊँ भन्ने फिराद दाबी।",
+    )
+
+    case2 = LegalCase(
+        case_number="०८२-FM-०८८५",
+        filing_number="दर्ता नं. २४१०/०८२",
+        case_title="सीता देवी पौडेल विरुद्ध सुवास चन्द्र पौडेल",
+        court_name="ललितपुर जिल्ला अदालत (Lalitpur District Court)",
+        bench_section="पारिवारिक इजलास - फाँट नं. २",
+        case_type="सम्बन्ध विच्छेद र अंश (Divorce & Alimony)",
+        client_id=c2.id,
+        client_party_role="वादी (Plaintiff)",
+        opponent_name="सुवास चन्द्र पौडेल",
+        opponent_address="ललितपुर म.न.पा.-५, पुल्चोक",
+        opponent_contact="9851088776",
+        opponent_counsel="अधिवक्ता प्रकाश न्यौपाने",
+        registration_date_bs="2082-11-03",
+        registration_date_ad=bs_to_ad("2082-11-03"),
+        status="बहसको क्रममा (In Arguments)",
+        deal_amount=85000.0,
+        paid_amount=85000.0,
+        due_amount=0.0,
+        advocate_id=adv_sunita.id,
+        assistant_id=staff_asmita.id,
+        waris_name="सीता देवी पौडेल (स्वयं)",
+        next_hearing_date_bs="2083-07-25",
+        next_hearing_date_ad=bs_to_ad("2083-07-25"),
+        summary="मुलुकी देवानी संहिता, २०७४ को दफा ९३ बमोजिम अंश सहित सम्बन्ध विच्छेद र नाबालकको संरक्षकत्व दिलाई पाऊँ।",
+    )
+
+    case3 = LegalCase(
+        case_number="०८३-CB-०११९",
+        filing_number="दर्ता नं. ०३४५/०८३",
+        case_title="राजेश कुमार अग्रवाल विरुद्ध नविन ट्रेडिङ प्रा.लि. (सञ्चालक दिपेश शाह)",
+        court_name="उच्च अदालत पाटन (High Court Patan)",
+        bench_section="वाणिज्य इजलास - फाँट नं. ३",
+        case_type="चेक अनादर / लेनदेन (Cheque Bounce & Recovery)",
+        client_id=c3.id,
+        client_party_role="वादी / जाहेरवाला (Plaintiff)",
+        opponent_name="दिपेश कुमार शाह (नविन ट्रेडिङ प्रा.लि.)",
+        opponent_address="काठमाडौँ म.न.पा.-२२, न्यूरोड",
+        opponent_contact="9801992211",
+        opponent_counsel="अधिवक्ता सरोज के.सी.",
+        registration_date_bs="2083-02-18",
+        registration_date_ad=bs_to_ad("2083-02-18"),
+        status="विचाराधीन (Active)",
+        deal_amount=200000.0,
+        paid_amount=120000.0,
+        due_amount=80000.0,
+        advocate_id=adv_dipak.id,
+        assistant_id=staff_kamal.id,
+        waris_name="कमल थापा मगर",
+        next_hearing_date_bs="2083-07-22",
+        next_hearing_date_ad=bs_to_ad("2083-07-22"),
+        summary="रु. ४५,००,०००/- को चेक पर्याप्त मौज्दात नभई ३ पटक बाउन्स भएकोले साँवा, ब्याज र जरिवाना भराइ पाऊँ।",
+    )
+
+    case4 = LegalCase(
+        case_number="०८१-CR-१०९२",
+        filing_number="दर्ता नं. ३९०१/०८१",
+        case_title="कल्पना तामाङ विरुद्ध हरिहर थापा समेत",
+        court_name="भक्तपुर जिल्ला अदालत (Bhaktapur District Court)",
+        bench_section="फाँट नं. ४",
+        case_type="दूषित लिखत बदर र जालसाजी (Deed Cancellation & Fraud)",
+        client_id=c4.id,
+        client_party_role="वादी (Plaintiff)",
+        opponent_name="हरिहर थापा र मालपोत फाँट सहयोगी",
+        opponent_address="सूर्यविनायक न.पा.-६, भक्तपुर",
+        opponent_contact="9841665544",
+        opponent_counsel="अधिवक्ता राजेन्द्र श्रेष्ठ",
+        registration_date_bs="2081-09-20",
+        registration_date_ad=bs_to_ad("2081-09-20"),
+        status="फैसला भएको (Decided)",
+        deal_amount=110000.0,
+        paid_amount=95000.0,
+        due_amount=15000.0,
+        advocate_id=adv_ramesh.id,
+        assistant_id=staff_asmita.id,
+        waris_name="कल्पना तामाङ",
+        next_hearing_date_bs="2083-08-05",
+        next_hearing_date_ad=bs_to_ad("2083-08-05"),
+        summary="झुक्याई पारित गराएको राजीनामा लिखत बदर गरी साविक बमोजिम जग्गा दर्ता कायम गरिपाऊँ (वादी दाबी पुग्ने फैसला भएको, फैसला कार्यान्वयन बाँकी)।",
+    )
+
+    db.add_all([case1, case2, case3, case4])
+    db.flush()
+
+    # 4. पेशी विवरण (Hearings / Peshi Records)
+    hearings = [
+        Hearing(
+            case_id=case1.id,
+            hearing_date_bs="2083-05-10",
+            hearing_date_ad=bs_to_ad("2083-05-10"),
+            hearing_status="आदेश (Court Order)",
+            bench_or_judge="इजलास नं. ३ - माननीय न्यायाधीश श्री टेकनारायण कुँवर",
+            next_hearing_date_bs=cur_bs,
+            next_hearing_date_ad=bs_to_ad(cur_bs),
+            outcome="प्रतिवादीहरूको नाममा काठमाडौँ मालपोत कार्यालयबाट जग्गाको तायदाती फाँटवारी माग गर्ने आदेश भएको।",
+            attended_by_id=adv_ramesh.id,
+            remarks="मालपोतमा पत्र बुझाइसकिएको",
+        ),
+        Hearing(
+            case_id=case1.id,
+            hearing_date_bs=cur_bs,
+            hearing_date_ad=bs_to_ad(cur_bs),
+            hearing_status="बहस / पेशी तोकिएको (Scheduled for Arguments)",
+            bench_or_judge="इजलास नं. ५",
+            next_hearing_date_bs="2083-08-12",
+            next_hearing_date_ad=bs_to_ad("2083-08-12"),
+            outcome="तायदाती फाँटवारी प्राप्त भएको, आज बकपत्र र थुनछेक/अन्तरिम आदेश सम्बन्धी बहस हुने।",
+            attended_by_id=adv_ramesh.id,
+            remarks="आजको मुख्य पेशी",
+        ),
+        Hearing(
+            case_id=case2.id,
+            hearing_date_bs="2083-06-14",
+            hearing_date_ad=bs_to_ad("2083-06-14"),
+            hearing_status="तारेख / मेलमिलाप (Tarekh / Mediation)",
+            bench_or_judge="इजलास नं. २ - माननीय न्यायाधीश श्री शारदा कोइराला",
+            next_hearing_date_bs="2083-07-25",
+            next_hearing_date_ad=bs_to_ad("2083-07-25"),
+            outcome="मेलमिलाप केन्द्रमा पठाइएकोमा सहमति नजुटेकोले अब अन्तिम बहसका लागि पेशी तोकिएको।",
+            attended_by_id=adv_sunita.id,
+        ),
+        Hearing(
+            case_id=case3.id,
+            hearing_date_bs="2083-06-28",
+            hearing_date_ad=bs_to_ad("2083-06-28"),
+            hearing_status="स्थगित (Postponed)",
+            bench_or_judge="संयुक्त इजलास नं. ४",
+            next_hearing_date_bs="2083-07-22",
+            next_hearing_date_ad=bs_to_ad("2083-07-22"),
+            outcome="विपक्षीको कानून व्यवसायीबाट बिरामीको निवेदन परी आजको पेशी स्थगित भएको।",
+            attended_by_id=adv_dipak.id,
+        ),
+        Hearing(
+            case_id=case4.id,
+            hearing_date_bs="2083-06-05",
+            hearing_date_ad=bs_to_ad("2083-06-05"),
+            hearing_status="फैसला (Final Verdict)",
+            bench_or_judge="इजलास नं. १ - माननीय न्यायाधीश श्री गोपाल प्रसाद बास्तोला",
+            next_hearing_date_bs="2083-08-05",
+            next_hearing_date_ad=bs_to_ad("2083-08-05"),
+            outcome="वादी दाबी पुग्ने ठहरी दूषित लिखत बदर हुने फैसला भएको। पूर्णपाठ र फैसला कार्यान्वयन तारेख २०८३-०८-०५ मा।",
+            attended_by_id=adv_ramesh.id,
+        ),
+    ]
+    db.add_all(hearings)
+
+    # 5. आर्थिक विवरण (Payment Transactions & Receipts)
+    payments = [
+        PaymentRecord(
+            case_id=case1.id,
+            client_id=c1.id,
+            amount=50000.0,
+            payment_date_bs="2082-08-14",
+            payment_date_ad=bs_to_ad("2082-08-14"),
+            payment_method="बैंक ट्रान्सफर (Bank Transfer)",
+            receipt_number="RCP-2082-0001",
+            purpose="पेश्की वकालत शुल्क (Advance Fee)",
+            reference_no="NABIL-TXN-88412",
+            remarks="मुद्दा दर्ता र फिराद लेखन शुल्क",
+            received_by_id=staff_asmita.id,
+        ),
+        PaymentRecord(
+            case_id=case1.id,
+            client_id=c1.id,
+            amount=40000.0,
+            payment_date_bs="2083-04-19",
+            payment_date_ad=bs_to_ad("2083-04-19"),
+            payment_method="नगद (Cash)",
+            receipt_number="RCP-2083-0002",
+            purpose="दोस्रो किस्ता बहस शुल्क (Installment 2)",
+            reference_no="CASH-COUNTER",
+            remarks="अन्तरिम आदेश बहस बापत प्राप्त",
+            received_by_id=staff_asmita.id,
+        ),
+        PaymentRecord(
+            case_id=case2.id,
+            client_id=c2.id,
+            amount=85000.0,
+            payment_date_bs="2082-11-03",
+            payment_date_ad=bs_to_ad("2082-11-03"),
+            payment_method="eSewa",
+            receipt_number="RCP-2082-0003",
+            purpose="पूरा वकालत शुल्क चुक्ता (Full Settlement)",
+            reference_no="ESEWA-0991245",
+            remarks="सम्पूर्ण सहमति बमोजिमको रकम एकमुष्ट प्राप्त",
+            received_by_id=staff_asmita.id,
+        ),
+        PaymentRecord(
+            case_id=case3.id,
+            client_id=c3.id,
+            amount=120000.0,
+            payment_date_bs="2083-02-18",
+            payment_date_ad=bs_to_ad("2083-02-18"),
+            payment_method="चेक (Cheque)",
+            receipt_number="RCP-2083-0004",
+            purpose="पेश्की तथा बहस शुल्क (Legal Retainer & Filing)",
+            reference_no="GIME-CHQ-449012",
+            remarks="ग्लोबल आइएमई बैंकको एकाउन्ट पेयी चेक मार्फत",
+            received_by_id=adv_dipak.id,
+        ),
+        PaymentRecord(
+            case_id=case4.id,
+            client_id=c4.id,
+            amount=95000.0,
+            payment_date_bs="2083-06-08",
+            payment_date_ad=bs_to_ad("2083-06-08"),
+            payment_method="नगद (Cash)",
+            receipt_number="RCP-2083-0005",
+            purpose="वकालत र फैसला बहस शुल्क",
+            reference_no="CASH",
+            remarks="फैसलाको नक्कल पश्चात रु. १५,००० बाँकी भुक्तानी गर्ने सहमति",
+            received_by_id=staff_asmita.id,
+        ),
+    ]
+    db.add_all(payments)
+
+    # 6. कागजात सम्बन्धी विवरण (Case Documents)
+    documents = [
+        CaseDocument(
+            case_id=case1.id,
+            client_id=c1.id,
+            document_name="जग्गाधनी दर्ता प्रमाणपुर्जा (लालपुर्जा - कि.नं. ४१२ र ४१५)",
+            document_type="मूल कागजात (Original)",
+            status="कार्यालयमा सुरक्षित (In Office)",
+            received_date_bs="2082-08-10",
+            received_date_ad=bs_to_ad("2082-08-10"),
+            returned_date_bs=None,
+            handover_person="हरिबहादुर श्रेष्ठ",
+            remarks="अदालतमा भिडाउनको लागि मूल लालपुर्जा सेफमा राखिएको",
+        ),
+        CaseDocument(
+            case_id=case1.id,
+            client_id=c1.id,
+            document_name="नागरिकता प्रमाणपत्र र नाता प्रमाणित पत्र",
+            document_type="प्रमाणित प्रतिलिपि (Certified Copy)",
+            status="अदालतमा पेश (Submitted to Court)",
+            received_date_bs="2082-08-10",
+            received_date_ad=bs_to_ad("2082-08-10"),
+            returned_date_bs=None,
+            handover_person="हरिबहादुर श्रेष्ठ",
+            remarks="फिरादपत्र साथ काठमाडौँ जिल्ला अदालतमा पेश गरिएको",
+        ),
+        CaseDocument(
+            case_id=case2.id,
+            client_id=c2.id,
+            document_name="विवाह दर्ता प्रमाणपत्र र नाबालक जन्मदर्ता",
+            document_type="मूल कागजात (Original)",
+            status="क्लाइन्टलाई फिर्ता (Returned to Client)",
+            received_date_bs="2082-11-01",
+            received_date_ad=bs_to_ad("2082-11-01"),
+            returned_date_bs="2083-02-15",
+            returned_date_ad=bs_to_ad("2083-02-15"),
+            handover_person="सीता देवी पौडेल",
+            remarks="अदालतमा रुजु गराई मूल प्रमाणपत्र क्लाइन्टलाई फिर्ता बुझाइएको",
+        ),
+        CaseDocument(
+            case_id=case3.id,
+            client_id=c3.id,
+            document_name="बाउन्स भएको सक्कल चेक (रु. ४५,००,०००) र ३ वटा चेक बाउन्स स्लिप",
+            document_type="मूल कागजात (Original)",
+            status="कार्यालयमा सुरक्षित (In Office)",
+            received_date_bs="2083-02-15",
+            received_date_ad=bs_to_ad("2083-02-15"),
+            returned_date_bs=None,
+            handover_person="राजेश कुमार अग्रवाल",
+            remarks="बैंकिङ कसूर र चेक अनादर प्रमाणको लागि अत्यन्त महत्त्वपूर्ण सक्कल कागजात",
+        ),
+        CaseDocument(
+            case_id=case4.id,
+            client_id=c4.id,
+            document_name="भक्तपुर जिल्ला अदालतको फैसलाको प्रमाणित नक्कल र तमसुक प्रतिलिपि",
+            document_type="प्रतिलिपि (Copy)",
+            status="कार्यालयमा सुरक्षित (In Office)",
+            received_date_bs="2083-06-20",
+            received_date_ad=bs_to_ad("2083-06-20"),
+            returned_date_bs=None,
+            handover_person="कमल थापा मगर (फाँटबाट झिकेको)",
+            remarks="फैसला कार्यान्वयनका लागि मालपोत पठाउन तयार",
+        ),
+    ]
+    db.add_all(documents)
+    db.commit()
+    logger.info("Initial Law Firm data seeded successfully.")
