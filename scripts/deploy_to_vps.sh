@@ -8,7 +8,7 @@
 set -euo pipefail
 
 echo "============================================================"
-echo " ⚖️  Vidhi Law Firm CMS - Production Deployment (Linux VPS)"
+echo " ⚖️  Vidhi Law Firm CMS - Production Deployment (Port 8999)"
 echo "============================================================"
 
 # 1. Verify Docker & Docker Compose
@@ -40,17 +40,17 @@ if command -v mysql >/dev/null 2>&1; then
 fi
 
 # 4. Build and start the production container
-echo "[*] Building and starting Vidhi Law Firm container..."
+echo "[*] Building and starting Vidhi Law Firm container on port ${APP_PORT:-8999}..."
 docker compose -f docker-compose.prod.yml up -d --build
 
 # 5. Wait for health check
-echo "[*] Waiting for application health check on port ${APP_PORT:-8080}..."
+echo "[*] Waiting for application health check on port ${APP_PORT:-8999}..."
 sleep 5
-curl -fsS "http://127.0.0.1:${APP_PORT:-8080}/api/health" && echo ""
+curl -fsS "http://127.0.0.1:${APP_PORT:-8999}/api/health" && echo ""
 
 SERVER_IP=$(hostname -I | awk '{print $1}')
 echo "============================================================"
 echo " ✅ Deployment Complete!"
-echo " 🌐 Application URL : http://${SERVER_IP}:${APP_PORT:-8080}"
-echo " 📘 Swagger API Docs: http://${SERVER_IP}:${APP_PORT:-8080}/docs"
+echo " 🌐 Application URL : http://${SERVER_IP}:${APP_PORT:-8999}"
+echo " 📘 Swagger API Docs: http://${SERVER_IP}:${APP_PORT:-8999}/docs"
 echo "============================================================"

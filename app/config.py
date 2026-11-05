@@ -23,7 +23,7 @@ class Settings:
     SECRET_KEY: str = os.getenv("SECRET_KEY", "vidhi-law-firm-nepal-super-secret-jwt-key-2083")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
-    APP_PORT: int = int(os.getenv("APP_PORT", "8080"))
+    APP_PORT: int = int(os.getenv("APP_PORT", "8999"))
 
     UPLOAD_DIR: Path = BASE_DIR / "app" / "static" / "uploads"
 
