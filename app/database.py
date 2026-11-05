@@ -1,6 +1,7 @@
 import logging
 import pymysql
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import settings
 
@@ -10,32 +11,43 @@ Base = declarative_base()
 
 
 def ensure_mysql_database_exists() -> bool:
-    """Create the MySQL database with UTF8MB4 charset if it does not already exist."""
-    if settings.DATABASE_URL_OVERRIDE and not settings.DATABASE_URL_OVERRIDE.startswith("mysql"):
+    """Create the MySQL database (lawfirm_db) with UTF8MB4 charset if it does not already exist."""
+    db_url_str = settings.database_url
+    if not db_url_str.startswith("mysql"):
         return True
+
     try:
+        parsed = make_url(db_url_str)
+        host = parsed.host or settings.MYSQL_HOST
+        port = parsed.port or settings.MYSQL_PORT
+        user = parsed.username or settings.MYSQL_USER
+        password = parsed.password or settings.MYSQL_PASSWORD
+        db_name = parsed.database or settings.MYSQL_DATABASE
+
         conn = pymysql.connect(
-            host=settings.MYSQL_HOST,
-            port=settings.MYSQL_PORT,
-            user=settings.MYSQL_USER,
-            password=settings.MYSQL_PASSWORD,
+            host=host,
+            port=port,
+            user=user,
+            password=password,
             charset="utf8mb4",
             connect_timeout=10,
         )
         try:
             with conn.cursor() as cursor:
-                db_name = settings.MYSQL_DATABASE
                 cursor.execute(
                     f"CREATE DATABASE IF NOT EXISTS `{db_name}` "
                     "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
                 )
             conn.commit()
-            print(f"[MySQL] Connected to MySQL ({settings.MYSQL_HOST}:{settings.MYSQL_PORT}) -> Database '{db_name}' ready.")
+            print(f"[MySQL] Connected to MySQL ({host}:{port} as '{user}') -> Database '{db_name}' ready.")
             return True
         finally:
             conn.close()
     except Exception as exc:
-        logger.warning("Could not connect to MySQL at %s:%s (%s).", settings.MYSQL_HOST, settings.MYSQL_PORT, exc)
+        logger.warning("Could not auto-create or verify MySQL database (%s).", exc)
+        # Still return True if DATABASE_URL_OVERRIDE is explicitly provided so SQLAlchemy connects directly
+        if settings.DATABASE_URL_OVERRIDE:
+            return True
         return False
 
 
