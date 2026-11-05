@@ -5,17 +5,24 @@ services:
       dockerfile: Dockerfile
     container_name: vidhi_lawfirm_app
     restart: unless-stopped
-    network_mode: "host"
     env_file:
       - .env.production
+    ports:
+      - "${APP_EXTERNAL_PORT:-8999}:8999"
     volumes:
       - lawfirm_uploads:/app/app/static/uploads
+    networks:
+      - erp_default
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8999/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
+
+networks:
+  erp_default:
+    external: true
 
 volumes:
   lawfirm_uploads:
