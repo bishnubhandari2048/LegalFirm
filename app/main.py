@@ -20,6 +20,8 @@ from app.routers import (
     finance_router,
     documents_router,
     dashboard_router,
+    modules_router,
+    company_router,
 )
 from app.routers.finance_router import serialize_payment
 from app.routers.cases_router import serialize_case
@@ -30,7 +32,6 @@ templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all tables and seed initial Nepal Law Firm records if empty
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
@@ -44,8 +45,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     description=(
-        "विधि ल फर्म व्यवस्थापन प्रणाली (Law Firm Management System) — "
-        "क्लाइन्ट, मुद्दा, पेशी/तारेख, आर्थिक रसिद, कागजात र वकिल/कर्मचारी व्यवस्थापन।"
+        "विधि तथा कर्पोरेट व्यवस्थापन प्रणाली (Modular Law Firm, OCR, IRD Tax & Audit Management System)"
     ),
     lifespan=lifespan,
 )
@@ -58,17 +58,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount Static Files
 app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="static")
 
 # Include API Routers
 app.include_router(auth_router.router)
+app.include_router(modules_router.router)
 app.include_router(dashboard_router.router)
 app.include_router(clients_router.router)
 app.include_router(cases_router.router)
 app.include_router(hearings_router.router)
 app.include_router(finance_router.router)
 app.include_router(documents_router.router)
+app.include_router(company_router.router)
 app.include_router(staff_router.router)
 
 

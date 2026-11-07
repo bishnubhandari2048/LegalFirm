@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="ne">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>विधि ल फर्म व्यवस्थापन प्रणाली | Vidhi Law Firm Management System</title>
+  <title>Vidhi Modular CMS — Legal, Company (OCR), IRD Tax & Audit</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Mukta', 'Inter', sans-serif; }
+    body { font-family: 'Inter', 'Mukta', sans-serif; }
     .nav-active { background: linear-gradient(90deg, #b45309 0%, #d97706 100%); color: #ffffff !important; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35); }
     .modal-backdrop { background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(3px); }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -19,34 +19,41 @@
   <!-- ================= LOGIN SCREEN ================= -->
   <div id="login-screen" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4">
     <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-700">
-      <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-amber-900 p-6 text-white text-center">
-        <div class="text-4xl mb-2">⚖️</div>
-        <h1 class="text-2xl font-extrabold tracking-tight">विधि व्यवस्थापन प्रणाली</h1>
-        <p class="text-amber-300 text-xs uppercase tracking-widest mt-1">Law Firm Management System (Nepal)</p>
+      <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-amber-900 p-6 text-white">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-3xl">⚖️</span>
+          <!-- Language Toggle on Login -->
+          <div class="inline-flex rounded-lg bg-slate-800 p-0.5 border border-slate-600 text-xs">
+            <button type="button" onclick="setLanguage('en')" id="login-lang-en" class="px-2.5 py-1 rounded-md font-bold">🇬🇧 English</button>
+            <button type="button" onclick="setLanguage('ne')" id="login-lang-ne" class="px-2.5 py-1 rounded-md font-bold">🇳🇵 नेपाली</button>
+          </div>
+        </div>
+        <h1 data-i18n="app_title" class="text-xl font-extrabold tracking-tight">Vidhi Law, Company (OCR), Tax & Audit CMS</h1>
+        <p data-i18n="app_subtitle" class="text-amber-300 text-xs mt-1">Modular Practice Management — Legal, OCR, IRD Tax & Audit</p>
       </div>
       <form id="login-form" class="p-6 space-y-4">
         <div id="login-error" class="hidden p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium"></div>
         <div>
-          <label class="block text-sm font-bold text-slate-700 mb-1">प्रयोगकर्ता नाम (Username)</label>
+          <label data-i18n="lbl_username" class="block text-sm font-bold text-slate-700 mb-1">Username</label>
           <input type="text" id="login-username" value="admin" required
             class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none" />
         </div>
         <div>
-          <label class="block text-sm font-bold text-slate-700 mb-1">पासवर्ड (Password)</label>
+          <label data-i18n="lbl_password" class="block text-sm font-bold text-slate-700 mb-1">Password</label>
           <input type="password" id="login-password" value="admin123" required
             class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none" />
         </div>
-        <button type="submit"
+        <button type="submit" data-i18n="btn_signin"
           class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow-lg transition">
-          लगइन गर्नुहोस् (Sign In) →
+          Sign In →
         </button>
 
         <div class="pt-3 border-t border-slate-200 text-xs text-slate-500 space-y-1">
-          <div class="font-semibold text-slate-700">डेमो लगइन खाताहरू (Quick Demo Accounts):</div>
+          <div data-i18n="demo_accounts" class="font-semibold text-slate-700">Quick Demo Accounts:</div>
           <div class="flex flex-wrap gap-2 pt-1">
-            <button type="button" onclick="fillLogin('admin','admin123')" class="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 rounded border text-slate-700">वरिष्ठ अधिवक्ता (admin / admin123)</button>
-            <button type="button" onclick="fillLogin('sunita','lawfirm123')" class="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 rounded border text-slate-700">अधिवक्ता (sunita / lawfirm123)</button>
-            <button type="button" onclick="fillLogin('kamal','lawfirm123')" class="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 rounded border text-slate-700">कर्मचारी (kamal / lawfirm123)</button>
+            <button type="button" onclick="fillLogin('admin','admin123')" class="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 rounded border text-slate-700">Partner (admin / admin123)</button>
+            <button type="button" onclick="fillLogin('dipak','lawfirm123')" class="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 rounded border text-slate-700">Corporate/Tax (dipak / lawfirm123)</button>
+            <button type="button" onclick="fillLogin('kamal','lawfirm123')" class="px-2.5 py-1 bg-slate-100 hover:bg-amber-100 rounded border text-slate-700">Staff (kamal / lawfirm123)</button>
           </div>
         </div>
       </form>
@@ -58,99 +65,101 @@
 
     <!-- SIDEBAR -->
     <aside class="w-full lg:w-72 bg-slate-900 text-slate-200 flex flex-col shrink-0 shadow-xl">
-      <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <span class="text-3xl bg-amber-500/20 p-2 rounded-xl border border-amber-500/40">⚖️</span>
+          <span class="text-2xl bg-amber-500/20 p-2 rounded-xl border border-amber-500/40">⚖️</span>
           <div>
-            <h1 class="font-extrabold text-lg text-white leading-tight">विधि ल फर्म</h1>
-            <p class="text-[11px] text-amber-400 font-medium">VIDHI LAW FIRM CMS</p>
+            <h1 data-i18n="brand_name" class="font-extrabold text-base text-white leading-tight">Vidhi Practice CMS</h1>
+            <p data-i18n="brand_tag" class="text-[11px] text-amber-400 font-medium">LEGAL • OCR • IRD TAX • AUDIT</p>
           </div>
         </div>
       </div>
 
       <!-- Today BS Date Badge -->
-      <div class="mx-4 mt-4 p-3 rounded-xl bg-slate-800/90 border border-slate-700 text-xs">
-        <div class="text-slate-400">आजको मिति (Today's Date):</div>
-        <div id="sidebar-date-bs" class="text-amber-400 font-bold text-sm mt-0.5">वि.सं. २०८३ कार्तिक १८</div>
-        <div id="sidebar-date-ad" class="text-slate-400 text-[11px]">AD: 2026-11-04</div>
+      <div class="mx-3 mt-3 p-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs flex justify-between items-center">
+        <div>
+          <div data-i18n="lbl_today_date" class="text-slate-400 text-[11px]">Today's Date:</div>
+          <div id="sidebar-date-bs" class="text-amber-400 font-bold text-xs mt-0.5">BS: 2083-07-21</div>
+        </div>
+        <div id="sidebar-date-ad" class="text-slate-400 text-[11px] font-mono">AD</div>
       </div>
 
       <!-- Navigation Links -->
-      <nav class="p-3 space-y-1.5 flex-1 overflow-y-auto text-sm font-medium mt-1">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn nav-active w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition hover:bg-slate-800">
+      <nav class="p-3 space-y-1 flex-1 overflow-y-auto text-sm font-medium">
+        <!-- CORE SECTION -->
+        <div data-i18n="sec_core" class="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Core Workspace</div>
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn nav-active w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
           <span>📊</span>
-          <div>
-            <div class="font-bold">ड्यासबोर्ड र दैनिक पेशी</div>
-            <div class="text-[11px] opacity-80">Dashboard & Daily Cause List</div>
-          </div>
+          <span data-i18n="nav_dashboard" class="font-bold">Dashboard & Reminders</span>
         </button>
-
-        <button onclick="switchTab('clients')" id="nav-clients" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition hover:bg-slate-800">
+        <button onclick="switchTab('clients')" id="nav-clients" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
           <span>👥</span>
-          <div>
-            <div class="font-bold">क्लाइन्टको विवरण</div>
-            <div class="text-[11px] opacity-80">Client Records & Citizenship</div>
-          </div>
+          <span data-i18n="nav_clients" class="font-bold">Clients Directory</span>
         </button>
 
-        <button onclick="switchTab('cases')" id="nav-cases" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition hover:bg-slate-800">
-          <span>📁</span>
-          <div>
-            <div class="font-bold">मुद्दाको विवरण</div>
-            <div class="text-[11px] opacity-80">Cases, Court & Opponents</div>
+        <!-- MODULE 1: LEGAL & LITIGATION -->
+        <div id="sidebar-group-legal" class="space-y-1 pt-2">
+          <div class="px-3 pb-1 flex justify-between items-center">
+            <span data-i18n="sec_legal_module" class="text-[10px] font-bold uppercase tracking-wider text-amber-400">⚖️ Legal & Litigation Module</span>
           </div>
-        </button>
+          <button onclick="switchTab('cases')" id="nav-cases" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
+            <span>📁</span>
+            <span data-i18n="nav_cases" class="font-bold">Court Cases (Mudda)</span>
+          </button>
+          <button onclick="switchTab('hearings')" id="nav-hearings" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
+            <span>🏛️</span>
+            <span data-i18n="nav_hearings" class="font-bold">Hearings (Peshi/Tarekh)</span>
+          </button>
+          <button onclick="switchTab('finance')" id="nav-finance" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
+            <span>💰</span>
+            <span data-i18n="nav_finance" class="font-bold">Fee Deal & Receipts</span>
+          </button>
+          <button onclick="switchTab('documents')" id="nav-documents" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
+            <span>📄</span>
+            <span data-i18n="nav_documents" class="font-bold">Case Documents</span>
+          </button>
+        </div>
 
-        <button onclick="switchTab('hearings')" id="nav-hearings" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition hover:bg-slate-800">
-          <span>🏛️</span>
-          <div>
-            <div class="font-bold">पेशी तथा तारेख विवरण</div>
-            <div class="text-[11px] opacity-80">Hearings, Tarekh & Outcomes</div>
+        <!-- MODULE 2: COMPANY MANAGEMENT (OCR + IRD TAX + AUDIT) -->
+        <div id="sidebar-group-company" class="space-y-1 pt-2">
+          <div class="px-3 pb-1 flex justify-between items-center">
+            <span data-i18n="sec_company_module" class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">🏢 Company (OCR, Tax & Audit)</span>
           </div>
-        </button>
+          <button onclick="switchTab('companies')" id="nav-companies" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
+            <span>🏢</span>
+            <span data-i18n="nav_companies" class="font-bold">Companies (OCR & PAN/VAT)</span>
+          </button>
+          <button onclick="switchTab('compliance')" id="nav-compliance" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
+            <span>📋</span>
+            <span data-i18n="nav_compliance" class="font-bold">OCR, IRD Tax & Audit Tasks</span>
+          </button>
+        </div>
 
-        <button onclick="switchTab('finance')" id="nav-finance" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition hover:bg-slate-800">
-          <span>💰</span>
-          <div>
-            <div class="font-bold">आर्थिक तथा रसिद विवरण</div>
-            <div class="text-[11px] opacity-80">Fee Deal, Paid, Due & Receipts</div>
-          </div>
-        </button>
-
-        <button onclick="switchTab('documents')" id="nav-documents" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition hover:bg-slate-800">
-          <span>📄</span>
-          <div>
-            <div class="font-bold">कागजात सम्बन्धी विवरण</div>
-            <div class="text-[11px] opacity-80">Original/Copy Docs & Handover</div>
-          </div>
-        </button>
-
-        <button onclick="switchTab('staff')" id="nav-staff" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition hover:bg-slate-800">
+        <!-- ADMINISTRATION & PLUG-AND-PLAY MODULES -->
+        <div data-i18n="sec_admin" class="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Firm & Module Settings</div>
+        <button onclick="switchTab('staff')" id="nav-staff" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
           <span>👨‍⚖️</span>
-          <div>
-            <div class="font-bold">वकिल तथा कर्मचारी विवरण</div>
-            <div class="text-[11px] opacity-80">Advocates & Support Staff</div>
-          </div>
+          <span data-i18n="nav_staff" class="font-bold">Advocates, Auditors & Staff</span>
         </button>
-
-        <button onclick="switchTab('tools')" id="nav-tools" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition hover:bg-slate-800">
+        <button onclick="switchTab('tools')" id="nav-tools" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
           <span>🔍</span>
-          <div>
-            <div class="font-bold">द्वन्द्व जाँच र मिति रूपान्तरण</div>
-            <div class="text-[11px] opacity-80">Conflict Check & BS/AD Tool</div>
-          </div>
+          <span data-i18n="nav_tools" class="font-bold">Conflict & BS/AD Converter</span>
+        </button>
+        <button onclick="switchTab('modules')" id="nav-modules" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-left transition hover:bg-slate-800">
+          <span>🔌</span>
+          <span data-i18n="nav_modules" class="font-bold">Plug & Play Modules</span>
         </button>
       </nav>
 
       <!-- Current User Footer -->
-      <div class="p-4 border-t border-slate-800 bg-slate-950/60">
+      <div class="p-3.5 border-t border-slate-800 bg-slate-950/60">
         <div class="flex items-center justify-between">
           <div class="truncate pr-2">
-            <div id="user-display-name" class="font-bold text-xs text-white truncate">वरिष्ठ अधिवक्ता</div>
-            <div id="user-display-role" class="text-[11px] text-amber-400 truncate">Admin</div>
+            <div id="user-display-name" class="font-bold text-xs text-white truncate">Admin</div>
+            <div id="user-display-role" class="text-[11px] text-amber-400 truncate">Managing Partner</div>
           </div>
-          <button onclick="handleLogout()" class="px-2.5 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-lg text-xs font-semibold transition">
-            लगआउट
+          <button onclick="handleLogout()" data-i18n="btn_logout" class="px-2.5 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-lg text-xs font-semibold transition">
+            Logout
           </button>
         </div>
       </div>
@@ -158,24 +167,38 @@
 
     <!-- MAIN CONTENT AREA -->
     <main class="flex-1 flex flex-col min-w-0 overflow-x-hidden">
-      <!-- Top Header Bar -->
-      <header class="bg-white border-b border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-20 shadow-sm">
+      <!-- Top Header Bar with Language Switcher -->
+      <header class="bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-20 shadow-sm">
         <div>
-          <h2 id="page-title" class="text-xl font-extrabold text-slate-900">📊 समग्र ड्यासबोर्ड र दैनिक पेशी सूची (Dashboard)</h2>
-          <p id="page-subtitle" class="text-xs text-slate-500">फर्मको सम्पूर्ण मुद्दा, क्लाइन्ट, पेशी, आर्थिक र कागजातहरूको एकीकृत विवरण</p>
+          <h2 id="page-title" class="text-lg font-extrabold text-slate-900">📊 Dashboard & Reminders</h2>
+          <p id="page-subtitle" class="text-xs text-slate-500">Unified overview of Court Hearings, OCR Filings, IRD Tax Returns & Audits</p>
         </div>
-        <div class="flex items-center gap-2.5">
-          <button onclick="openClientModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-sm">
-            + नयाँ क्लाइन्ट
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Language Switcher Toggle (EN <-> NE) -->
+          <div class="inline-flex items-center rounded-xl bg-slate-100 p-1 border border-slate-300 mr-2">
+            <button type="button" onclick="setLanguage('en')" id="hdr-lang-en"
+              class="px-3 py-1 rounded-lg text-xs font-extrabold transition">
+              🇬🇧 English
+            </button>
+            <button type="button" onclick="setLanguage('ne')" id="hdr-lang-ne"
+              class="px-3 py-1 rounded-lg text-xs font-extrabold transition">
+              🇳🇵 नेपाली
+            </button>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <button onclick="openClientModal()" data-i18n="btn_new_client" id="qa-client" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-sm">
+            + Client
           </button>
-          <button onclick="openCaseModal()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold shadow-sm">
-            + नयाँ मुद्दा दर्ता
+          <button onclick="openCaseModal()" data-i18n="btn_new_case" id="qa-case" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold shadow-sm">
+            + Case
           </button>
-          <button onclick="openHearingModal()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm">
-            + पेशी थप्नुहोस्
+          <button onclick="openCompanyModal()" data-i18n="btn_new_company" id="qa-company" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shadow-sm">
+            + Company (OCR/PAN)
           </button>
-          <button onclick="openPaymentModal()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm">
-            + भुक्तानी रसिद
+          <button onclick="openComplianceModal()" data-i18n="btn_new_compliance" id="qa-compliance" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm">
+            + OCR/Tax/Audit Task
           </button>
         </div>
       </header>
@@ -193,102 +216,120 @@
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div class="flex justify-between items-start">
                 <div>
-                  <p class="text-xs font-semibold text-slate-500">कुल क्लाइन्ट संख्या (Total Clients)</p>
-                  <h3 id="kpi-clients" class="text-3xl font-extrabold text-slate-900 mt-1">0</h3>
+                  <p data-i18n="kpi_clients_lbl" class="text-xs font-semibold text-slate-500">Clients & Companies</p>
+                  <h3 id="kpi-clients" class="text-2xl font-extrabold text-slate-900 mt-1">0</h3>
                 </div>
                 <span class="text-2xl bg-blue-50 p-2.5 rounded-xl">👥</span>
               </div>
-              <p class="text-xs text-slate-500 mt-2">सक्रिय सेवाग्राही अभिलेख</p>
+              <p id="kpi-companies-sub" class="text-xs text-emerald-700 font-semibold mt-2">Registered Companies: 0</p>
             </div>
 
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div class="flex justify-between items-start">
                 <div>
-                  <p class="text-xs font-semibold text-slate-500">कुल मुद्दाहरू (Total Cases)</p>
-                  <h3 id="kpi-cases" class="text-3xl font-extrabold text-slate-900 mt-1">0</h3>
+                  <p data-i18n="kpi_cases_lbl" class="text-xs font-semibold text-slate-500">Court Cases (Litigation)</p>
+                  <h3 id="kpi-cases" class="text-2xl font-extrabold text-slate-900 mt-1">0</h3>
                 </div>
                 <span class="text-2xl bg-amber-50 p-2.5 rounded-xl">📁</span>
               </div>
-              <p id="kpi-cases-sub" class="text-xs text-amber-700 font-medium mt-2">विचाराधीन: 0 | फैसला: 0</p>
+              <p id="kpi-cases-sub" class="text-xs text-amber-700 font-medium mt-2">Active: 0 | Decided: 0</p>
             </div>
 
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div class="flex justify-between items-start">
                 <div>
-                  <p class="text-xs font-semibold text-slate-500">प्राप्त वकालत शुल्क (Paid Amount)</p>
-                  <h3 id="kpi-paid" class="text-2xl font-extrabold text-emerald-700 mt-1">रु. 0</h3>
+                  <p data-i18n="kpi_compliance_lbl" class="text-xs font-semibold text-slate-500">Pending OCR / Tax / Audit</p>
+                  <h3 id="kpi-compliance" class="text-2xl font-extrabold text-indigo-700 mt-1">0</h3>
+                </div>
+                <span class="text-2xl bg-indigo-50 p-2.5 rounded-xl">🏢</span>
+              </div>
+              <p data-i18n="kpi_compliance_sub" class="text-xs text-slate-500 mt-2">Periodic Filings, VAT, D-03 & AGM</p>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p data-i18n="kpi_due_lbl" class="text-xs font-semibold text-slate-500">Collected / Balance Due</p>
+                  <h3 id="kpi-paid" class="text-xl font-extrabold text-emerald-700 mt-1">NPR 0</h3>
                 </div>
                 <span class="text-2xl bg-emerald-50 p-2.5 rounded-xl">💰</span>
               </div>
-              <p id="kpi-deal-sub" class="text-xs text-slate-500 mt-2">कुल सहमति (Deal): रु. 0</p>
-            </div>
-
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <div class="flex justify-between items-start">
-                <div>
-                  <p class="text-xs font-semibold text-slate-500">उठाउन बाँकी रकम (Due Amount)</p>
-                  <h3 id="kpi-due" class="text-2xl font-extrabold text-rose-600 mt-1">रु. 0</h3>
-                </div>
-                <span class="text-2xl bg-rose-50 p-2.5 rounded-xl">🧾</span>
-              </div>
-              <p id="kpi-docs-sub" class="text-xs text-slate-500 mt-2">कार्यालयमा सुरक्षित मूल कागजात: 0</p>
+              <p id="kpi-due" class="text-xs text-rose-600 font-bold mt-2">Due: NPR 0</p>
             </div>
           </div>
 
-          <!-- Daily & Upcoming Cause List (आजको र आगामी पेशी तथा तारेख सूची) -->
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="px-6 py-4 bg-slate-900 text-white flex flex-wrap justify-between items-center gap-2">
+          <!-- Upcoming OCR, IRD Tax & Audit Deadlines (When Company Module is Enabled) -->
+          <div id="dash-company-reminders-card" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-emerald-900 to-slate-900 text-white flex flex-wrap justify-between items-center gap-2">
               <div>
-                <h3 class="font-bold text-base flex items-center gap-2">
-                  <span>🏛️</span> आजको तथा आगामी पेशी र तारेख सूची (Upcoming Cause List / Peshi Schedule)
+                <h3 data-i18n="dash_comp_reminders_title" class="font-bold text-base">
+                  🏢 Upcoming Company (OCR), IRD Tax & Audit Compliance Deadlines
                 </h3>
-                <p class="text-xs text-slate-300">अदालतमा उपस्थित हुनुपर्ने मुद्दा, जिम्मेवार अधिवक्ता र सहायक कर्मचारीको विवरण</p>
+                <p data-i18n="dash_comp_reminders_sub" class="text-xs text-emerald-200">
+                  Section 78 Annual Returns, Monthly VAT/e-TDS (25th), Estimated Tax, Tax Clearance & UDIN Audits
+                </p>
               </div>
-              <button onclick="switchTab('hearings')" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs">
-                सबै पेशी हेर्नुहोस् →
+              <button onclick="switchTab('compliance')" data-i18n="btn_view_all_compliance" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs">
+                Open Compliance Tracker →
               </button>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-sm text-left">
                 <thead class="bg-slate-50 text-slate-600 border-b text-xs uppercase">
                   <tr>
-                    <th class="py-3 px-4">पेशी मिति (वि.सं.)</th>
-                    <th class="py-3 px-4">मुद्दा नं. र प्रकार</th>
-                    <th class="py-3 px-4">अदालत / फाँट</th>
-                    <th class="py-3 px-4">क्लाइन्ट वि. विपक्षी</th>
-                    <th class="py-3 px-4">जिम्मेवार अधिवक्ता / सहायक</th>
-                    <th class="py-3 px-4">अवस्था</th>
-                    <th class="py-3 px-4 text-right">कार्य</th>
+                    <th data-i18n="th_due_date" class="py-3 px-4">Due Date (BS)</th>
+                    <th data-i18n="th_category" class="py-3 px-4">Authority / Pillar</th>
+                    <th data-i18n="th_company" class="py-3 px-4">Company Name</th>
+                    <th data-i18n="th_activity" class="py-3 px-4">Periodic Activity / Filing</th>
+                    <th data-i18n="th_fy" class="py-3 px-4">Fiscal Year</th>
+                    <th data-i18n="th_status" class="py-3 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-compliance-body" class="divide-y divide-slate-200"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Daily & Upcoming Court Cause List (When Legal Module is Enabled) -->
+          <div id="dash-legal-causelist-card" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-slate-900 text-white flex flex-wrap justify-between items-center gap-2">
+              <div>
+                <h3 data-i18n="dash_causelist_title" class="font-bold text-base">
+                  🏛️ Upcoming Court Cause List (Peshi & Tarekh Schedule)
+                </h3>
+                <p data-i18n="dash_causelist_sub" class="text-xs text-slate-300">Scheduled court hearings, lead advocates, and assigned paralegal staff</p>
+              </div>
+              <button onclick="switchTab('hearings')" data-i18n="btn_view_all_hearings" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs">
+                View All Hearings →
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left">
+                <thead class="bg-slate-50 text-slate-600 border-b text-xs uppercase">
+                  <tr>
+                    <th data-i18n="th_hearing_date" class="py-3 px-4">Hearing Date (BS)</th>
+                    <th data-i18n="th_case_no" class="py-3 px-4">Case No. & Type</th>
+                    <th data-i18n="th_court" class="py-3 px-4">Court / Bench</th>
+                    <th data-i18n="th_parties" class="py-3 px-4">Client vs Opponent</th>
+                    <th data-i18n="th_advocate" class="py-3 px-4">Advocate / Staff</th>
+                    <th data-i18n="th_status" class="py-3 px-4">Status</th>
+                    <th data-i18n="th_actions" class="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="dashboard-causelist-body" class="divide-y divide-slate-200"></tbody>
               </table>
             </div>
           </div>
-
-          <!-- Case Breakdown & Recent Hearings -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-              <h3 class="font-bold text-slate-900 mb-3 border-b pb-2">📌 मुद्दाको प्रकार अनुसार वर्गीकरण (Cases by Type)</h3>
-              <div id="dashboard-case-types" class="space-y-2.5 text-sm"></div>
-            </div>
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-              <h3 class="font-bold text-slate-900 mb-3 border-b pb-2">⚖️ हालसालै सम्पन्न पेशीका नतिजाहरू (Recent Hearing Outcomes)</h3>
-              <div id="dashboard-recent-hearings" class="space-y-3 text-sm"></div>
-            </div>
-          </div>
         </section>
 
-        <!-- 2. CLIENTS VIEW (क्लाइन्टको विवरण) -->
+        <!-- 2. CLIENTS VIEW -->
         <section id="view-clients" class="tab-view hidden space-y-4">
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
-            <div class="flex items-center gap-2 flex-1 min-w-[260px]">
-              <input type="text" id="client-search" oninput="loadClients()"
-                placeholder="नाम, थर, सम्पर्क नम्बर, नागरिकता नं. वा ठेगानाले खोज्नुहोस्..."
-                class="w-full max-w-md px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" />
-            </div>
-            <button onclick="openClientModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow">
-              + नयाँ क्लाइन्ट दर्ता गर्नुहोस् (Add Client)
+            <input type="text" id="client-search" oninput="loadClients()"
+              placeholder="Search by Name, Phone, Citizenship No., or Address..."
+              class="w-full max-w-md px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" />
+            <button onclick="openClientModal()" data-i18n="btn_add_client" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow">
+              + Register New Client
             </button>
           </div>
 
@@ -297,13 +338,13 @@
               <table class="w-full text-sm text-left">
                 <thead class="bg-slate-800 text-white text-xs uppercase">
                   <tr>
-                    <th class="py-3.5 px-4">क्र.सं.</th>
-                    <th class="py-3.5 px-4">नाम, थर (Client Name)</th>
-                    <th class="py-3.5 px-4">ठेगाना (Address)</th>
-                    <th class="py-3.5 px-4">सम्पर्क नम्बर र इमेल</th>
-                    <th class="py-3.5 px-4">नागरिकता नम्बर र जारी जिल्ला</th>
-                    <th class="py-3.5 px-4">मुद्दा र आर्थिक हिसाब</th>
-                    <th class="py-3.5 px-4 text-right">कार्य (Actions)</th>
+                    <th class="py-3.5 px-4">#</th>
+                    <th data-i18n="th_client_name" class="py-3.5 px-4">Client Name</th>
+                    <th data-i18n="th_address" class="py-3.5 px-4">Address</th>
+                    <th data-i18n="th_contact" class="py-3.5 px-4">Phone & Email</th>
+                    <th data-i18n="th_citizenship" class="py-3.5 px-4">Citizenship No.</th>
+                    <th data-i18n="th_cases_billing" class="py-3.5 px-4">Cases & Billing</th>
+                    <th data-i18n="th_actions" class="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="clients-table-body" class="divide-y divide-slate-200"></tbody>
@@ -312,27 +353,25 @@
           </div>
         </section>
 
-        <!-- 3. CASES VIEW (मुद्दाको विवरण) -->
+        <!-- 3. CASES VIEW (LEGAL MODULE) -->
         <section id="view-cases" class="tab-view hidden space-y-4">
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
             <div class="flex flex-wrap items-center gap-2 flex-1">
               <input type="text" id="case-search" oninput="loadCases()"
-                placeholder="मुद्दा नं., अदालत, क्लाइन्ट वा विपक्षीको नामले खोज्नुहोस्..."
-                class="w-72 px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" />
+                placeholder="Search Case No., Court, Client or Opponent..."
+                class="w-72 px-3.5 py-2 border border-slate-300 rounded-xl text-sm" />
               <select id="case-type-filter" onchange="loadCases()" class="px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white">
-                <option value="">सबै मुद्दाका प्रकार (All Types)</option>
-                <option value="अंशबण्डा (Partition of Property)">अंशबण्डा (Partition)</option>
-                <option value="लेनदेन (Loan / Recovery)">लेनदेन (Recovery)</option>
-                <option value="सम्बन्ध विच्छेद र अंश (Divorce & Alimony)">सम्बन्ध विच्छेद (Divorce)</option>
-                <option value="चेक अनादर / लेनदेन (Cheque Bounce & Recovery)">चेक अनादर (Cheque Bounce)</option>
-                <option value="दूषित लिखत बदर र जालसाजी (Deed Cancellation & Fraud)">लिखत बदर / जालसाजी</option>
-                <option value="जग्गा खिचलो (Land Dispute)">जग्गा खिचलो (Land Dispute)</option>
-                <option value="रिट निवेदन (Writ Petition)">रिट निवेदन (Writ)</option>
-                <option value="फौजदारी (Criminal Defense)">फौजदारी (Criminal)</option>
+                <option value="">All Case Types / सबै प्रकार</option>
+                <option value="अंशबण्डा (Partition of Property)">Partition (अंशबण्डा)</option>
+                <option value="लेनदेन (Loan / Recovery)">Recovery (लेनदेन)</option>
+                <option value="सम्बन्ध विच्छेद र अंश (Divorce & Alimony)">Divorce (सम्बन्ध विच्छेद)</option>
+                <option value="चेक अनादर / लेनदेन (Cheque Bounce & Recovery)">Cheque Bounce (चेक अनादर)</option>
+                <option value="दूषित लिखत बदर र जालसाजी (Deed Cancellation & Fraud)">Deed Cancellation (लिखत बदर)</option>
+                <option value="रिट निवेदन (Writ Petition)">Writ Petition (रिट निवेदन)</option>
               </select>
             </div>
-            <button onclick="openCaseModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow">
-              + नयाँ मुद्दा दर्ता गर्नुहोस् (Register Case)
+            <button onclick="openCaseModal()" data-i18n="btn_register_case" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow">
+              + Register New Case
             </button>
           </div>
 
@@ -341,13 +380,13 @@
               <table class="w-full text-sm text-left">
                 <thead class="bg-slate-800 text-white text-xs uppercase">
                   <tr>
-                    <th class="py-3.5 px-4">मुद्दा नं. र दर्ता मिति</th>
-                    <th class="py-3.5 px-4">अदालत र मुद्दाको प्रकार</th>
-                    <th class="py-3.5 px-4">क्लाइन्ट वि. विपक्षीको नाम</th>
-                    <th class="py-3.5 px-4">जिम्मेवार अधिवक्ता र सहायक</th>
-                    <th class="py-3.5 px-4">अर्को पेशी र अवस्था</th>
-                    <th class="py-3.5 px-4">शुल्क (सहमति / प्राप्त / बाँकी)</th>
-                    <th class="py-3.5 px-4 text-right">कार्य (Actions)</th>
+                    <th data-i18n="th_case_no" class="py-3.5 px-4">Case No. & Date</th>
+                    <th data-i18n="th_court" class="py-3.5 px-4">Court & Case Type</th>
+                    <th data-i18n="th_parties" class="py-3.5 px-4">Client vs Opponent</th>
+                    <th data-i18n="th_advocate" class="py-3.5 px-4">Assigned Team</th>
+                    <th data-i18n="th_hearing_date" class="py-3.5 px-4">Next Hearing & Status</th>
+                    <th data-i18n="th_fee_summary" class="py-3.5 px-4">Fee (Deal / Paid / Due)</th>
+                    <th data-i18n="th_actions" class="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="cases-table-body" class="divide-y divide-slate-200"></tbody>
@@ -356,24 +395,14 @@
           </div>
         </section>
 
-        <!-- 4. HEARINGS / PESHI VIEW (पेशी विवरण) -->
+        <!-- 4. HEARINGS VIEW (LEGAL MODULE) -->
         <section id="view-hearings" class="tab-view hidden space-y-4">
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
-            <div class="flex flex-wrap items-center gap-2 flex-1">
-              <input type="text" id="hearing-search" oninput="loadHearings()"
-                placeholder="मुद्दा नं., अदालत, पेशीको अवस्था वा नतिजाले खोज्नुहोस्..."
-                class="w-80 px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" />
-              <select id="hearing-status-filter" onchange="loadHearings()" class="px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white">
-                <option value="">सबै पेशीको अवस्था (All Status)</option>
-                <option value="तारेख (Tarekh)">तारेख (Tarekh)</option>
-                <option value="बहस / पेशी तोकिएको (Scheduled for Arguments)">बहस (Arguments)</option>
-                <option value="आदेश (Court Order)">आदेश (Order)</option>
-                <option value="स्थगित (Postponed)">स्थगित (Postponed)</option>
-                <option value="फैसला (Final Verdict)">फैसला (Final Verdict)</option>
-              </select>
-            </div>
-            <button onclick="openHearingModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow">
-              + नयाँ पेशी विवरण थप्नुहोस् (Add Peshi Record)
+            <input type="text" id="hearing-search" oninput="loadHearings()"
+              placeholder="Search Case No., Court, Status or Outcome..."
+              class="w-80 px-3.5 py-2 border border-slate-300 rounded-xl text-sm" />
+            <button onclick="openHearingModal()" data-i18n="btn_add_hearing" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow">
+              + Add Hearing (Peshi)
             </button>
           </div>
 
@@ -382,13 +411,13 @@
               <table class="w-full text-sm text-left">
                 <thead class="bg-slate-800 text-white text-xs uppercase">
                   <tr>
-                    <th class="py-3.5 px-4">पेशी मिति (वि.सं.)</th>
-                    <th class="py-3.5 px-4">मुद्दा नं. र अदालत</th>
-                    <th class="py-3.5 px-4">पक्ष र विपक्षी</th>
-                    <th class="py-3.5 px-4">पेशीको अवस्था (Status)</th>
-                    <th class="py-3.5 px-4">पेशीको नतिजा / आदेश (Outcome)</th>
-                    <th class="py-3.5 px-4">अर्को पेशी मिति</th>
-                    <th class="py-3.5 px-4 text-right">कार्य</th>
+                    <th data-i18n="th_hearing_date" class="py-3.5 px-4">Hearing Date (BS)</th>
+                    <th data-i18n="th_case_no" class="py-3.5 px-4">Case No. & Court</th>
+                    <th data-i18n="th_parties" class="py-3.5 px-4">Parties</th>
+                    <th data-i18n="th_status" class="py-3.5 px-4">Hearing Status</th>
+                    <th data-i18n="th_outcome" class="py-3.5 px-4">Outcome / Court Order</th>
+                    <th data-i18n="th_next_date" class="py-3.5 px-4">Next Hearing</th>
+                    <th data-i18n="th_actions" class="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="hearings-table-body" class="divide-y divide-slate-200"></tbody>
@@ -397,46 +426,41 @@
           </div>
         </section>
 
-        <!-- 5. FINANCIALS VIEW (आर्थिक विवरण) -->
+        <!-- 5. FINANCIALS VIEW -->
         <section id="view-finance" class="tab-view hidden space-y-6">
-          <!-- Financial Summary Banner -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <p class="text-xs text-slate-500 font-semibold">कुल सहमति भएको शुल्क (Total Deal Amount)</p>
-              <h3 id="fin-total-deal" class="text-2xl font-extrabold text-slate-900 mt-1">रु. 0</h3>
+              <p data-i18n="fin_deal_lbl" class="text-xs text-slate-500 font-semibold">Total Agreed Fee (Deal Amount)</p>
+              <h3 id="fin-total-deal" class="text-2xl font-extrabold text-slate-900 mt-1">NPR 0</h3>
             </div>
             <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-200 shadow-sm">
-              <p class="text-xs text-emerald-700 font-semibold">कुल प्राप्त रकम (Total Paid Amount)</p>
-              <h3 id="fin-total-paid" class="text-2xl font-extrabold text-emerald-800 mt-1">रु. 0</h3>
+              <p data-i18n="fin_paid_lbl" class="text-xs text-emerald-700 font-semibold">Total Paid Amount</p>
+              <h3 id="fin-total-paid" class="text-2xl font-extrabold text-emerald-800 mt-1">NPR 0</h3>
             </div>
             <div class="bg-rose-50 p-5 rounded-2xl border border-rose-200 shadow-sm">
-              <p class="text-xs text-rose-700 font-semibold">कुल बाँकी रकम (Total Due Amount)</p>
-              <h3 id="fin-total-due" class="text-2xl font-extrabold text-rose-800 mt-1">रु. 0</h3>
+              <p data-i18n="fin_due_lbl" class="text-xs text-rose-700 font-semibold">Total Balance Due</p>
+              <h3 id="fin-total-due" class="text-2xl font-extrabold text-rose-800 mt-1">NPR 0</h3>
             </div>
           </div>
 
-          <!-- Case-wise Deal / Paid / Due Ledger -->
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="px-6 py-4 bg-slate-100 border-b flex justify-between items-center">
-              <div>
-                <h3 class="font-bold text-slate-900">📊 मुद्दा अनुसार सहमति शुल्क, प्राप्त र बाँकी रकमको हिसाब (Case-wise Financial Ledger)</h3>
-                <p class="text-xs text-slate-500">सहमति भएको शुल्क (Deal Amount), प्राप्त रकम (Paid) र बाँकी रकम (Due)</p>
-              </div>
-              <button onclick="openPaymentModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow">
-                + नयाँ भुक्तानी र रसिद काट्नुहोस् (Record Payment)
+              <h3 data-i18n="fin_ledger_title" class="font-bold text-slate-900">📊 Case-wise Fee Ledger (Deal, Paid & Due)</h3>
+              <button onclick="openPaymentModal()" data-i18n="btn_record_payment" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow">
+                + Record Payment & Issue Receipt
               </button>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-sm text-left">
                 <thead class="bg-slate-800 text-white text-xs uppercase">
                   <tr>
-                    <th class="py-3 px-4">मुद्दा नं. र प्रकार</th>
-                    <th class="py-3 px-4">क्लाइन्टको नाम</th>
-                    <th class="py-3 px-4 text-right">सहमति शुल्क (Deal Amount)</th>
-                    <th class="py-3 px-4 text-right">प्राप्त रकम (Paid Amount)</th>
-                    <th class="py-3 px-4 text-right">बाँकी रकम (Due Amount)</th>
-                    <th class="py-3 px-4 text-center">भुक्तानी अवस्था</th>
-                    <th class="py-3 px-4 text-right">कार्य</th>
+                    <th class="py-3 px-4">Case No.</th>
+                    <th class="py-3 px-4">Client</th>
+                    <th class="py-3 px-4 text-right">Deal Amount</th>
+                    <th class="py-3 px-4 text-right">Paid Amount</th>
+                    <th class="py-3 px-4 text-right">Due Amount</th>
+                    <th class="py-3 px-4 text-center">Status</th>
+                    <th class="py-3 px-4 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody id="finance-ledger-body" class="divide-y divide-slate-200"></tbody>
@@ -444,25 +468,24 @@
             </div>
           </div>
 
-          <!-- Payment Receipts History -->
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="px-6 py-4 bg-slate-100 border-b flex flex-wrap justify-between items-center gap-3">
-              <h3 class="font-bold text-slate-900">🧾 भुक्तानी कारोबार तथा रसिदहरूको सूची (Payment Transactions & Receipts)</h3>
+              <h3 data-i18n="fin_receipts_title" class="font-bold text-slate-900">🧾 Payment Transactions & Official Receipts</h3>
               <input type="text" id="payment-search" oninput="loadFinance()"
-                placeholder="रसिद नं., क्लाइन्ट वा माध्यम (नगद, बैंक, eSewa)..."
+                placeholder="Search Receipt No., Client or Method (Cash, Bank, eSewa)..."
                 class="w-72 px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white" />
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-sm text-left">
                 <thead class="bg-slate-50 text-slate-700 border-b text-xs uppercase">
                   <tr>
-                    <th class="py-3 px-4">रसिद नम्बर (Receipt No.)</th>
-                    <th class="py-3 px-4">भुक्तानी मिति (वि.सं.)</th>
-                    <th class="py-3 px-4">क्लाइन्ट र मुद्दा नं.</th>
-                    <th class="py-3 px-4">प्रयोजन</th>
-                    <th class="py-3 px-4">भुक्तानीको माध्यम</th>
-                    <th class="py-3 px-4 text-right">प्राप्त रकम (NPR)</th>
-                    <th class="py-3 px-4 text-right">रसिद प्रिन्ट / कार्य</th>
+                    <th class="py-3 px-4">Receipt No.</th>
+                    <th class="py-3 px-4">Date (BS)</th>
+                    <th class="py-3 px-4">Client & Case</th>
+                    <th class="py-3 px-4">Purpose</th>
+                    <th class="py-3 px-4">Payment Method</th>
+                    <th class="py-3 px-4 text-right">Amount</th>
+                    <th class="py-3 px-4 text-right">Print / Action</th>
                   </tr>
                 </thead>
                 <tbody id="payments-table-body" class="divide-y divide-slate-200"></tbody>
@@ -471,22 +494,22 @@
           </div>
         </section>
 
-        <!-- 6. DOCUMENTS VIEW (कागजात सम्बन्धी विवरण) -->
+        <!-- 6. DOCUMENTS VIEW -->
         <section id="view-documents" class="tab-view hidden space-y-4">
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
             <div class="flex flex-wrap items-center gap-2 flex-1">
               <input type="text" id="doc-search" oninput="loadDocuments()"
-                placeholder="कागजातको नाम, मुद्दा नं. वा बुझाउने व्यक्तिले खोज्नुहोस्..."
-                class="w-80 px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" />
+                placeholder="Search Document Name, Case No. or Handover Person..."
+                class="w-80 px-3.5 py-2 border border-slate-300 rounded-xl text-sm" />
               <select id="doc-type-filter" onchange="loadDocuments()" class="px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white">
-                <option value="">मूल वा प्रतिलिपि (All Types)</option>
-                <option value="मूल कागजात (Original)">मूल कागजात (Original)</option>
-                <option value="प्रतिलिपि (Copy)">प्रतिलिपि (Copy)</option>
-                <option value="प्रमाणित प्रतिलिपि (Certified Copy)">प्रमाणित प्रतिलिपि (Certified Copy)</option>
+                <option value="">All Formats (Original & Copy)</option>
+                <option value="मूल कागजात (Original)">Original (मूल कागजात)</option>
+                <option value="प्रतिलिपि (Copy)">Copy (प्रतिलिपि)</option>
+                <option value="प्रमाणित प्रतिलिपि (Certified Copy)">Certified Copy (प्रमाणित प्रतिलिपि)</option>
               </select>
             </div>
-            <button onclick="openDocumentModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow">
-              + कागजात दर्ता / अपलोड गर्नुहोस् (Add Document)
+            <button onclick="openDocumentModal()" data-i18n="btn_add_document" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow">
+              + Add / Upload Document
             </button>
           </div>
 
@@ -495,13 +518,13 @@
               <table class="w-full text-sm text-left">
                 <thead class="bg-slate-800 text-white text-xs uppercase">
                   <tr>
-                    <th class="py-3.5 px-4">प्राप्त कागजातको नाम</th>
-                    <th class="py-3.5 px-4">मुद्दा नं. र क्लाइन्ट</th>
-                    <th class="py-3.5 px-4">मूल कागजात वा प्रतिलिपि</th>
-                    <th class="py-3.5 px-4">कागजात बुझाएको मिति</th>
-                    <th class="py-3.5 px-4">फिर्ता गरेको मिति</th>
-                    <th class="py-3.5 px-4">अवस्था र डिजिटल फाइल</th>
-                    <th class="py-3.5 px-4 text-right">कार्य</th>
+                    <th class="py-3.5 px-4">Document Name</th>
+                    <th class="py-3.5 px-4">Case & Client</th>
+                    <th class="py-3.5 px-4">Original / Copy</th>
+                    <th class="py-3.5 px-4">Received Date</th>
+                    <th class="py-3.5 px-4">Returned Date</th>
+                    <th class="py-3.5 px-4">Status & File</th>
+                    <th class="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="documents-table-body" class="divide-y divide-slate-200"></tbody>
@@ -510,15 +533,121 @@
           </div>
         </section>
 
-        <!-- 7. ADVOCATES & STAFF VIEW (वकिल तथा कर्मचारी विवरण) -->
+        <!-- 7. COMPANIES DIRECTORY VIEW (OCR + IRD PAN/VAT + AUDITORS) -->
+        <section id="view-companies" class="tab-view hidden space-y-5">
+          <!-- Company Module KPIs -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div data-i18n="comp_kpi_total" class="text-xs font-semibold text-slate-500">Registered Companies (OCR)</div>
+              <div id="comp-kpi-entities" class="text-2xl font-extrabold text-slate-900 mt-1">0</div>
+              <div class="text-[11px] text-slate-500 mt-1">Pvt. Ltd., Public Ltd. & Firms</div>
+            </div>
+            <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 shadow-sm">
+              <div data-i18n="comp_kpi_ocr" class="text-xs font-semibold text-amber-800">Pending OCR Filings</div>
+              <div id="comp-kpi-ocr-pending" class="text-2xl font-extrabold text-amber-900 mt-1">0</div>
+              <div class="text-[11px] text-amber-700 mt-1">Sec 78, Sec 51, Share Lagat, BOD</div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-2xl border border-blue-200 shadow-sm">
+              <div data-i18n="comp_kpi_ird" class="text-xs font-semibold text-blue-800">Pending IRD Tax & Clearance</div>
+              <div id="comp-kpi-ird-pending" class="text-2xl font-extrabold text-blue-900 mt-1">0</div>
+              <div class="text-[11px] text-blue-700 mt-1">Monthly VAT, e-TDS, Est. Tax & D-03</div>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-2xl border border-purple-200 shadow-sm">
+              <div data-i18n="comp_kpi_audit" class="text-xs font-semibold text-purple-800">Pending Statutory Audits / AGM</div>
+              <div id="comp-kpi-audit-pending" class="text-2xl font-extrabold text-purple-900 mt-1">0</div>
+              <div class="text-[11px] text-purple-700 mt-1">ICAN Auditor Sign-off & UDIN</div>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
+            <input type="text" id="company-search" oninput="loadCompanies()"
+              placeholder="Search Company Name, OCR Reg No., PAN/VAT No., or IRD Office..."
+              class="w-full max-w-md px-3.5 py-2 border border-slate-300 rounded-xl text-sm" />
+            <div class="flex gap-2">
+              <button onclick="openCompanyModal()" data-i18n="btn_register_company" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-sm font-bold shadow">
+                + Register Company (OCR / IRD / Audit)
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left">
+                <thead class="bg-slate-800 text-white text-xs uppercase">
+                  <tr>
+                    <th class="py-3.5 px-4">Company Name & Type</th>
+                    <th class="py-3.5 px-4">OCR Reg No. & Date</th>
+                    <th class="py-3.5 px-4">PAN/VAT & IRD Office</th>
+                    <th class="py-3.5 px-4">Capital & Auditor</th>
+                    <th class="py-3.5 px-4">Tax Clearance & OCR Status</th>
+                    <th class="py-3.5 px-4">Pending Tasks (OCR/Tax/Audit)</th>
+                    <th class="py-3.5 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="companies-table-body" class="divide-y divide-slate-200"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. OCR, IRD TAX & AUDIT COMPLIANCE TRACKER VIEW -->
+        <section id="view-compliance" class="tab-view hidden space-y-4">
+          <!-- Pillar Filter Tabs -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="filterComplianceCategory('')" id="comp-cat-ALL" class="comp-cat-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white">
+                All Activities (सबै)
+              </button>
+              <button onclick="filterComplianceCategory('OCR')" id="comp-cat-OCR" class="comp-cat-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-900">
+                🏛️ OCR (Company Registrar / कम्पनी रजिष्ट्रार)
+              </button>
+              <button onclick="filterComplianceCategory('IRD_TAX')" id="comp-cat-IRD_TAX" class="comp-cat-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-100 text-blue-900">
+                🧾 IRD Tax & Clearance (आन्तरिक राजस्व र कर चुक्ता)
+              </button>
+              <button onclick="filterComplianceCategory('AUDIT')" id="comp-cat-AUDIT" class="comp-cat-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-purple-100 text-purple-900">
+                📊 Statutory Audit & AGM (लेखापरीक्षण र UDIN)
+              </button>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="compliance-search" oninput="loadComplianceActivities()"
+                placeholder="Search company, activity, UDIN or certificate..."
+                class="w-64 px-3 py-1.5 border border-slate-300 rounded-xl text-xs" />
+              <button onclick="openComplianceModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow">
+                + Add Periodic Activity / Reminder
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left">
+                <thead class="bg-slate-800 text-white text-xs uppercase">
+                  <tr>
+                    <th class="py-3.5 px-4">Due Date & Reminder (BS)</th>
+                    <th class="py-3.5 px-4">Pillar</th>
+                    <th class="py-3.5 px-4">Company (OCR / PAN)</th>
+                    <th class="py-3.5 px-4">Activity / Filing & Remarks</th>
+                    <th class="py-3.5 px-4">FY & Period</th>
+                    <th class="py-3.5 px-4">Cert / UDIN / Officer</th>
+                    <th class="py-3.5 px-4">Status</th>
+                    <th class="py-3.5 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="compliance-table-body" class="divide-y divide-slate-200"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 9. ADVOCATES, AUDITORS & STAFF VIEW -->
         <section id="view-staff" class="tab-view hidden space-y-4">
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
             <div>
-              <h3 class="font-bold text-slate-900">👨‍⚖️ जिम्मेवार अधिवक्ता तथा सहायक कर्मचारीहरूको विवरण</h3>
-              <p class="text-xs text-slate-500">नेपाल बार काउन्सिल नं., विशेषज्ञता, सम्पर्क विवरण र जिम्मेवारीमा रहेका मुद्दाहरूको संख्या</p>
+              <h3 data-i18n="staff_header" class="font-bold text-slate-900">👨‍⚖️ Advocates, Chartered Accountants (Auditors) & Support Staff</h3>
+              <p class="text-xs text-slate-500">Nepal Bar Council License No., ICAN COP No., Specialization & Contact Details</p>
             </div>
             <button onclick="openStaffModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow">
-              + वकिल वा कर्मचारी थप्नुहोस् (Add Advocate/Staff)
+              + Add Advocate / Auditor / Staff
             </button>
           </div>
 
@@ -527,13 +656,13 @@
               <table class="w-full text-sm text-left">
                 <thead class="bg-slate-800 text-white text-xs uppercase">
                   <tr>
-                    <th class="py-3.5 px-4">नाम, थर (Name)</th>
-                    <th class="py-3.5 px-4">पद / भूमिका (Role & Designation)</th>
-                    <th class="py-3.5 px-4">बार काउन्सिल नं. र विशेषज्ञता</th>
-                    <th class="py-3.5 px-4">सम्पर्क विवरण (Phone & Email)</th>
-                    <th class="py-3.5 px-4">ठेगाना</th>
-                    <th class="py-3.5 px-4 text-center">जिम्मेवार मुद्दाहरू</th>
-                    <th class="py-3.5 px-4 text-right">कार्य</th>
+                    <th class="py-3.5 px-4">Full Name</th>
+                    <th class="py-3.5 px-4">Role & Designation</th>
+                    <th class="py-3.5 px-4">Bar / ICAN License & Specialization</th>
+                    <th class="py-3.5 px-4">Contact</th>
+                    <th class="py-3.5 px-4">Address</th>
+                    <th class="py-3.5 px-4 text-center">Assigned Cases</th>
+                    <th class="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="staff-table-body" class="divide-y divide-slate-200"></tbody>
@@ -542,39 +671,37 @@
           </div>
         </section>
 
-        <!-- 8. LEGAL TOOLS VIEW (द्वन्द्व जाँच र मिति रूपान्तरण) -->
+        <!-- 10. LEGAL TOOLS VIEW -->
         <section id="view-tools" class="tab-view hidden space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Conflict of Interest Check -->
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <h3 class="text-lg font-extrabold text-slate-900">🔍 विपक्षी तथा क्लाइन्ट द्वन्द्व जाँच (Conflict of Interest Check)</h3>
-              <p class="text-xs text-slate-500">नयाँ क्लाइन्टको मुद्दा लिनु अघि निज वा विपक्षीको नाम पहिले नै फर्मको कुनै मुद्दामा विपक्षी वा क्लाइन्ट रहे/नरहेको जाँच गर्नुहोस्।</p>
+              <h3 class="text-lg font-extrabold text-slate-900">🔍 Conflict of Interest Check (द्वन्द्व जाँच)</h3>
+              <p class="text-xs text-slate-500">Check across all existing Clients and Opponents before onboarding a new case.</p>
               <div class="flex gap-2">
-                <input type="text" id="conflict-input" placeholder="व्यक्तिको नाम, नागरिकता नं. वा फोन नं. लेख्नुहोस्..."
+                <input type="text" id="conflict-input" placeholder="Enter Name, Citizenship No., or Phone..."
                   class="flex-1 px-3.5 py-2 border border-slate-300 rounded-xl text-sm" />
                 <button onclick="runConflictCheck()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold">
-                  जाँच गर्नुहोस्
+                  Search
                 </button>
               </div>
               <div id="conflict-results" class="text-sm space-y-2 pt-2"></div>
             </div>
 
-            <!-- Bikram Sambat <-> AD Date Converter -->
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <h3 class="text-lg font-extrabold text-slate-900">📅 विक्रम संवत् (BS) ↔ ई.सं. (AD) मिति रूपान्तरण</h3>
-              <p class="text-xs text-slate-500">मुद्दा दर्ता मिति, पेशी मिति र कागजात मितिका लागि वि.सं. र ई.सं. रूपान्तरण गर्नुहोस्।</p>
+              <h3 class="text-lg font-extrabold text-slate-900">📅 Bikram Sambat (BS) ↔ Gregorian (AD) Date Converter</h3>
+              <p class="text-xs text-slate-500">Convert dates for Court Filings, OCR Deadlines, and IRD Tax Returns.</p>
               <div class="space-y-3">
                 <div class="flex items-end gap-2">
                   <div class="flex-1">
-                    <label class="block text-xs font-bold text-slate-600 mb-1">विक्रम संवत् मिति (BS: YYYY-MM-DD)</label>
-                    <input type="text" id="conv-bs-input" value="2083-07-18" placeholder="2083-07-18"
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Bikram Sambat Date (BS: YYYY-MM-DD)</label>
+                    <input type="text" id="conv-bs-input" value="2083-07-21"
                       class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm" />
                   </div>
                   <button onclick="convertBsToAd()" class="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-bold">BS → AD</button>
                 </div>
                 <div class="flex items-end gap-2">
                   <div class="flex-1">
-                    <label class="block text-xs font-bold text-slate-600 mb-1">ई.सं. मिति (AD: YYYY-MM-DD)</label>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Gregorian Date (AD: YYYY-MM-DD)</label>
                     <input type="date" id="conv-ad-input"
                       class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm" />
                   </div>
@@ -586,6 +713,19 @@
           </div>
         </section>
 
+        <!-- 11. PLUG-AND-PLAY MODULE SUBSCRIPTION VIEW -->
+        <section id="view-modules" class="tab-view hidden space-y-6">
+          <div class="bg-gradient-to-r from-slate-900 to-amber-950 text-white p-6 rounded-2xl shadow-lg">
+            <h3 class="text-xl font-extrabold flex items-center gap-2">
+              <span>🔌</span> Plug & Play Module Subscription Manager (मोड्युल व्यवस्थापन)
+            </h3>
+            <p class="text-xs text-amber-200 mt-1 max-w-3xl">
+              Enable or disable practice modules based on what your firm subscribes to. Law firms can enable only the Legal Module, Audit/Corporate firms can enable only the Company (OCR, IRD Tax & Audit) Module, or full-service firms can enable both!
+            </p>
+          </div>
+          <div id="modules-cards-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -594,7 +734,7 @@
   <div id="modal-container" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
       <div class="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
-        <h3 id="modal-title" class="font-bold text-lg">विवरण थप्नुहोस्</h3>
+        <h3 id="modal-title" class="font-bold text-lg">Details</h3>
         <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
       </div>
       <div id="modal-body" class="p-6 overflow-y-auto space-y-4 text-sm"></div>

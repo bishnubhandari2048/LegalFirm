@@ -4,6 +4,18 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 # ============================================================
+# 0. Plug-and-Play Module Subscription Schemas
+# ============================================================
+
+class ModuleConfigUpdate(BaseModel):
+    is_enabled: bool
+    enable_ocr: Optional[bool] = True
+    enable_ird_tax: Optional[bool] = True
+    enable_audit: Optional[bool] = True
+    plan_tier: Optional[str] = "Enterprise"
+
+
+# ============================================================
 # 1. वकिल तथा कर्मचारी विवरण (Staff & Advocates) + Auth
 # ============================================================
 
@@ -14,7 +26,7 @@ class LoginRequest(BaseModel):
 
 class StaffMemberBase(BaseModel):
     full_name: str = Field(..., min_length=1, description="पूरा नाम, थर")
-    role: str = Field(default="advocate", description="admin | advocate | staff")
+    role: str = Field(default="advocate", description="admin | advocate | auditor | staff")
     designation: str = Field(default="अधिवक्ता (Advocate)")
     bar_council_no: Optional[str] = None
     specialization: Optional[str] = None
@@ -116,7 +128,7 @@ class LegalCaseBase(BaseModel):
     case_title: Optional[str] = None
     court_name: str = Field(..., description="अदालतको नाम")
     bench_section: Optional[str] = None
-    case_type: str = Field(..., description="मुद्दाको प्रकार (अंशबण्डा, लेनदेन, सम्बन्ध विच्छेद आदि)")
+    case_type: str = Field(..., description="मुद्दाको प्रकार")
     client_id: int
     client_party_role: str = "वादी (Plaintiff)"
     opponent_name: str = Field(..., description="विपक्षीको नाम")
@@ -174,7 +186,7 @@ class HearingBase(BaseModel):
     case_id: int
     hearing_date_bs: str = Field(..., description="पेशी मिति (वि.सं.)")
     hearing_date_ad: Optional[date] = None
-    hearing_status: str = Field(..., description="पेशीको अवस्था (तारेख, बहस, फैसला, स्थगित आदि)")
+    hearing_status: str = Field(..., description="पेशीको अवस्था")
     bench_or_judge: Optional[str] = None
     next_hearing_date_bs: Optional[str] = None
     next_hearing_date_ad: Optional[date] = None
@@ -209,8 +221,8 @@ class PaymentBase(BaseModel):
     amount: float = Field(..., gt=0, description="प्राप्त रकम")
     payment_date_bs: str = Field(..., description="भुक्तानी मिति (वि.सं.)")
     payment_date_ad: Optional[date] = None
-    payment_method: str = Field(default="नगद (Cash)", description="नगद, बैंक, चेक, eSewa आदि")
-    receipt_number: Optional[str] = Field(default=None, description="रसिद नम्बर")
+    payment_method: str = Field(default="नगद (Cash)")
+    receipt_number: Optional[str] = Field(default=None)
     purpose: str = "वकालत शुल्क (Legal Fee)"
     reference_no: Optional[str] = None
     remarks: Optional[str] = None
@@ -222,7 +234,7 @@ class PaymentCreate(PaymentBase):
 
 
 class DealAmountUpdate(BaseModel):
-    deal_amount: float = Field(..., ge=0, description="सहमति भएको शुल्क (Deal Amount)")
+    deal_amount: float = Field(..., ge=0)
 
 
 # ============================================================
@@ -232,10 +244,10 @@ class DealAmountUpdate(BaseModel):
 class CaseDocumentBase(BaseModel):
     case_id: int
     client_id: Optional[int] = None
-    document_name: str = Field(..., description="प्राप्त भएका कागजातको नाम")
-    document_type: str = Field(default="प्रतिलिपि (Copy)", description="मूल कागजात वा प्रतिलिपि")
+    document_name: str
+    document_type: str = Field(default="प्रतिलिपि (Copy)")
     status: str = Field(default="कार्यालयमा सुरक्षित (In Office)")
-    received_date_bs: str = Field(..., description="कागजात बुझाएको मिति (वि.सं.)")
+    received_date_bs: str
     received_date_ad: Optional[date] = None
     returned_date_bs: Optional[str] = None
     returned_date_ad: Optional[date] = None
@@ -254,4 +266,119 @@ class CaseDocumentUpdate(BaseModel):
     received_date_bs: Optional[str] = None
     returned_date_bs: Optional[str] = None
     handover_person: Optional[str] = None
+    remarks: Optional[str] = None
+
+
+# ============================================================
+# 7. COMPANY MANAGEMENT MODULE (OCR, IRD TAX & AUDIT SCHEMAS)
+# ============================================================
+
+class CorporateEntityBase(BaseModel):
+    company_name_en: str
+    company_name_np: Optional[str] = None
+    company_type: str = "Private Limited (प्रा.लि.)"
+    ocr_registration_no: str
+    registration_date_bs: str
+    camis_username: Optional[str] = None
+    pan_vat_no: str
+    tax_registration_type: str = "VAT (मु.अ.कर)"
+    ird_office: str = "आन्तरिक राजस्व कार्यालय, बानेश्वर"
+    tax_clearance_upto_fy: Optional[str] = "2081/82"
+    authorized_capital: float = 0.0
+    issued_capital: float = 0.0
+    paidup_capital: float = 0.0
+    shareholders_count: int = 1
+    directors_summary: Optional[str] = None
+    registered_address: str
+    contact_person: str
+    contact_phone: str
+    contact_email: Optional[str] = None
+    current_auditor_name: Optional[str] = None
+    auditor_ican_no: Optional[str] = None
+    last_agm_date_bs: Optional[str] = None
+    last_ocr_filed_fy: Optional[str] = "2081/82"
+    annual_retainer_fee: float = 0.0
+    paid_retainer_amount: float = 0.0
+    client_id: Optional[int] = None
+    assigned_officer_id: Optional[int] = None
+    status: str = "Active (सक्रिय)"
+    notes: Optional[str] = None
+
+
+class CorporateEntityCreate(CorporateEntityBase):
+    auto_generate_periodic_tasks: bool = True
+
+
+class CorporateEntityUpdate(BaseModel):
+    company_name_en: Optional[str] = None
+    company_name_np: Optional[str] = None
+    company_type: Optional[str] = None
+    ocr_registration_no: Optional[str] = None
+    registration_date_bs: Optional[str] = None
+    camis_username: Optional[str] = None
+    pan_vat_no: Optional[str] = None
+    tax_registration_type: Optional[str] = None
+    ird_office: Optional[str] = None
+    tax_clearance_upto_fy: Optional[str] = None
+    authorized_capital: Optional[float] = None
+    issued_capital: Optional[float] = None
+    paidup_capital: Optional[float] = None
+    shareholders_count: Optional[int] = None
+    directors_summary: Optional[str] = None
+    registered_address: Optional[str] = None
+    contact_person: Optional[str] = None
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
+    current_auditor_name: Optional[str] = None
+    auditor_ican_no: Optional[str] = None
+    last_agm_date_bs: Optional[str] = None
+    last_ocr_filed_fy: Optional[str] = None
+    annual_retainer_fee: Optional[float] = None
+    paid_retainer_amount: Optional[float] = None
+    client_id: Optional[int] = None
+    assigned_officer_id: Optional[int] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ComplianceActivityBase(BaseModel):
+    company_id: int
+    category: str = "OCR"  # OCR | IRD_TAX | AUDIT
+    activity_type: str
+    fiscal_year: str = "2082/83"
+    period_label: Optional[str] = None
+    due_date_bs: str
+    completed_date_bs: Optional[str] = None
+    next_reminder_date_bs: Optional[str] = None
+    status: str = "Pending (बाँकी)"
+    priority: str = "High"
+    reference_or_certificate_no: Optional[str] = None
+    auditor_or_officer_name: Optional[str] = None
+    udin_number: Optional[str] = None
+    gov_fee_or_penalty: float = 0.0
+    professional_fee: float = 0.0
+    assigned_to_id: Optional[int] = None
+    remarks: Optional[str] = None
+
+
+class ComplianceActivityCreate(ComplianceActivityBase):
+    pass
+
+
+class ComplianceActivityUpdate(BaseModel):
+    category: Optional[str] = None
+    activity_type: Optional[str] = None
+    fiscal_year: Optional[str] = None
+    period_label: Optional[str] = None
+    due_date_bs: Optional[str] = None
+    completed_date_bs: Optional[str] = None
+    next_reminder_date_bs: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    reference_or_certificate_no: Optional[str] = None
+    auditor_or_officer_name: Optional[str] = None
+    udin_number: Optional[str] = None
+    gov_fee_or_penalty: Optional[float] = None
+    professional_fee: Optional[float] = None
+    assigned_to_id: Optional[int] = None
     remarks: Optional[str] = None

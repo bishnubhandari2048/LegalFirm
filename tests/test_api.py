@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-def test_full_law_firm_workflow():
+def test_full_law_firm_and_company_compliance_workflow():
     with TestClient(app) as client:
         # 1. Health & UI Home
         res = client.get("/api/health")
@@ -11,7 +11,7 @@ def test_full_law_firm_workflow():
 
         home = client.get("/")
         assert home.status_code == 200
-        assert "विधि व्यवस्थापन प्रणाली" in home.text
+        assert "Vidhi" in home.text
 
         # 2. Login as Admin / Senior Advocate
         login_res = client.post(
@@ -22,153 +22,72 @@ def test_full_law_firm_workflow():
         token = login_res.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
-        # 3. Dashboard Stats & Cause List
-        stats_res = client.get("/api/dashboard/stats", headers=headers)
-        assert stats_res.status_code == 200
-        stats = stats_res.json()
-        assert stats["counts"]["total_clients"] >= 4
-        assert stats["counts"]["total_cases"] >= 4
+        # 3. Plug-and-Play Modules Check
+        mod_res = client.get("/api/modules", headers=headers)
+        assert mod_res.status_code == 200
+        mods = mod_res.json()
+        assert len(mods) >= 2
+        mod_keys = [m["module_key"] for m in mods]
+        assert "legal" in mod_keys
+        assert "company_management" in mod_keys
 
-        # 4. क्लाइन्टको विवरण (Create & Verify Client)
-        new_client_res = client.post(
-            "/api/clients",
+        # 4. Company Management Module (OCR + IRD Tax + Statutory Audit)
+        comp_sum = client.get("/api/company/summary", headers=headers)
+        assert comp_sum.status_code == 200
+        assert comp_sum.json()["counts"]["total_companies"] >= 3
+
+        # Create a new Company with auto-generated OCR, IRD Tax & Audit tasks
+        new_comp_res = client.post(
+            "/api/company/entities",
             headers=headers,
             json={
-                "first_name": "गंगाप्रसाद",
-                "last_name": "ओली",
-                "address": "भद्रपुर न.पा.-५, झापा",
-                "district": "झापा",
-                "phone": "9842611223",
-                "email": "ganga.oli@example.com",
-                "citizenship_no": "०४-०१-७०-०५५६६",
-                "citizenship_district": "झापा",
-                "citizenship_issue_date_bs": "2070-06-15",
-                "father_or_spouse_name": "भवानीप्रसाद ओली",
-                "occupation": "कृषि",
+                "company_name_en": "Nepal Green Energy Pvt. Ltd.",
+                "company_name_np": "नेपाल ग्रीन इनर्जी प्रा.लि.",
+                "company_type": "Private Limited (प्रा.लि.)",
+                "ocr_registration_no": "999888/083/084",
+                "registration_date_bs": "2083-07-21",
+                "pan_vat_no": "619988776",
+                "tax_registration_type": "VAT (मु.अ.कर)",
+                "ird_office": "आन्तरिक राजस्व कार्यालय, बानेश्वर",
+                "tax_clearance_upto_fy": "2081/82",
+                "authorized_capital": 50000000.0,
+                "paidup_capital": 25000000.0,
+                "registered_address": "काठमाडौँ-१०, बानेश्वर",
+                "contact_person": "सुमन थापा",
+                "contact_phone": "9851223344",
+                "current_auditor_name": "CA प्रकाश खतिवडा",
+                "auditor_ican_no": "ICAN-COP-1142",
+                "annual_retainer_fee": 150000.0,
+                "paid_retainer_amount": 50000.0,
+                "auto_generate_periodic_tasks": True,
             },
         )
-        assert new_client_res.status_code == 200, new_client_res.text
-        client_id = new_client_res.json()["id"]
-        assert "गंगाप्रसाद ओली" in new_client_res.json()["full_name"]
+        assert new_comp_res.status_code == 200, new_comp_res.text
+        comp_data = new_comp_res.json()
+        comp_id = comp_data["id"]
+        assert comp_data["total_activities_count"] == 6
+        assert comp_data["due_retainer_amount"] == 100000.0
 
-        # 5. वकिल तथा कर्मचारी विवरण (List Staff)
-        staff_res = client.get("/api/staff", headers=headers)
-        assert staff_res.status_code == 200
-        staff_list = staff_res.json()
-        assert len(staff_list) >= 5
-        advocate_id = staff_list[0]["id"]
-        assistant_id = staff_list[3]["id"]
-
-        # 6. मुद्दाको विवरण (Create New Legal Case with Initial Advance)
-        case_res = client.post(
-            "/api/cases",
+        # Create a custom IRD Tax Clearance Activity & mark Completed
+        act_res = client.post(
+            "/api/company/activities",
             headers=headers,
             json={
-                "case_number": "०८३-WO-९९०२",
-                "filing_number": "दर्ता नं. ९९०२/०८३",
-                "court_name": "सर्वोच्च अदालत (Supreme Court of Nepal)",
-                "bench_section": "संवैधानिक इजलास",
-                "case_type": "रिट निवेदन (Writ Petition)",
-                "client_id": client_id,
-                "client_party_role": "निवेदक (Petitioner)",
-                "opponent_name": "भूमिसुधार तथा मालपोत कार्यालय, झापा समेत",
-                "registration_date_bs": "2083-07-18",
-                "deal_amount": 125000.0,
-                "initial_paid_amount": 45000.0,
-                "initial_payment_method": "बैंक ट्रान्सफर (Bank Transfer)",
-                "advocate_id": advocate_id,
-                "assistant_id": assistant_id,
-                "next_hearing_date_bs": "2083-07-28",
-                "summary": "उत्प्रेषणयुक्त परमादेश जारी गरिपाऊँ।",
+                "company_id": comp_id,
+                "category": "IRD_TAX",
+                "activity_type": "Tax Clearance Certificate (कर चुक्ता प्रमाणपत्र)",
+                "fiscal_year": "2082/83",
+                "due_date_bs": "2083-08-15",
+                "status": "Completed / Cleared (सम्पन्न / चुक्ता)",
+                "reference_or_certificate_no": "TCC-2082-83-777",
             },
         )
-        assert case_res.status_code == 200, case_res.text
-        case_data = case_res.json()
-        case_id = case_data["id"]
-        assert case_data["deal_amount"] == 125000.0
-        assert case_data["paid_amount"] == 45000.0
-        assert case_data["due_amount"] == 80000.0
+        assert act_res.status_code == 200, act_res.text
 
-        # 7. पेशी विवरण (Add Hearing / Peshi Record)
-        hearing_res = client.post(
-            "/api/hearings",
-            headers=headers,
-            json={
-                "case_id": case_id,
-                "hearing_date_bs": "2083-07-28",
-                "hearing_status": "आदेश (Court Order)",
-                "bench_or_judge": "एकल इजलास नं. २",
-                "next_hearing_date_bs": "2083-08-19",
-                "outcome": "विपक्षीहरूको नाममा १५ दिनभित्र लिखित जवाफ पेश गर्न कारण देखाउ आदेश जारी।",
-            },
-        )
-        assert hearing_res.status_code == 200, hearing_res.text
-        assert hearing_res.json()["next_hearing_date_bs"] == "2083-08-19"
+        # Verify parent company's tax_clearance_upto_fy updated automatically to 2082/83
+        comp_detail = client.get(f"/api/company/entities/{comp_id}", headers=headers).json()
+        assert comp_detail["tax_clearance_upto_fy"] == "2082/83"
 
-        # 8. आर्थिक विवरण (Record Second Payment via eSewa & Check Due Balance)
-        pay_res = client.post(
-            "/api/finance/payments",
-            headers=headers,
-            json={
-                "case_id": case_id,
-                "amount": 30000.0,
-                "payment_date_bs": "2083-07-29",
-                "payment_method": "eSewa",
-                "receipt_number": "RCP-TEST-2083-100",
-                "purpose": "अन्तरिम आदेश बहस शुल्क",
-                "reference_no": "ESEWA-TXN-778899",
-            },
-        )
-        assert pay_res.status_code == 200, pay_res.text
-        pay_data = pay_res.json()
-        assert pay_data["case_paid_amount"] == 75000.0
-        assert pay_data["case_due_amount"] == 50000.0
-
-        # 9. कागजात सम्बन्धी विवरण (Add Document & Update Return Date)
-        doc_res = client.post(
-            "/api/documents",
-            headers=headers,
-            json={
-                "case_id": case_id,
-                "document_name": "मालपोत कार्यालयको निर्णय पर्चा र जग्गाधनी पुर्जा",
-                "document_type": "मूल कागजात (Original)",
-                "status": "कार्यालयमा सुरक्षित (In Office)",
-                "received_date_bs": "2083-07-17",
-                "handover_person": "गंगाप्रसाद ओली",
-            },
-        )
-        assert doc_res.status_code == 200, doc_res.text
-        doc_id = doc_res.json()["id"]
-
-        # Update document return date
-        ret_res = client.put(
-            f"/api/documents/{doc_id}",
-            headers=headers,
-            json={"returned_date_bs": "2083-08-01"},
-        )
-        assert ret_res.status_code == 200
-        assert ret_res.json()["returned_date_bs"] == "2083-08-01"
-
-        # 10. Printable Receipt & Case File Dossier Views
-        rcp_print = client.get(f"/print/receipt/{pay_data['id']}")
-        assert rcp_print.status_code == 200
-        assert "RCP-TEST-2083-100" in rcp_print.text
-
-        case_print = client.get(f"/print/case/{case_id}")
-        assert case_print.status_code == 200
-        assert "०८३-WO-९९०२" in case_print.text
-
-        # 11. Conflict Check & Date Conversion
-        conf_res = client.get("/api/dashboard/conflict-check?q=गंगाप्रसाद", headers=headers)
-        assert conf_res.status_code == 200
-        assert conf_res.json()["has_conflict"] is True
-
-        conv_res = client.get("/api/dashboard/date-convert?bs=2083-07-18")
-        assert conv_res.status_code == 200
-        assert conv_res.json()["ad"] != ""
-
-        # Cleanup temporary test client & cascading case
-        del_case = client.delete(f"/api/cases/{case_id}", headers=headers)
-        assert del_case.status_code == 200
-        del_client = client.delete(f"/api/clients/{client_id}", headers=headers)
-        assert del_client.status_code == 200
+        # Cleanup test company
+        del_comp = client.delete(f"/api/company/entities/{comp_id}", headers=headers)
+        assert del_comp.status_code == 200

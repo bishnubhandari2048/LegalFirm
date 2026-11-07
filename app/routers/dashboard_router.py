@@ -11,6 +11,9 @@ from app.models import (
     PaymentRecord,
     CaseDocument,
     StaffMember,
+    CorporateEntity,
+    ComplianceActivity,
+    SystemModuleConfig,
 )
 from app.auth import get_current_user
 from app.bs_calendar import today_bs, ad_to_bs, bs_to_ad, format_bs_human
@@ -46,6 +49,13 @@ def get_dashboard_stats(
         .count()
     )
 
+    # Company Management (OCR + IRD Tax + Audit) KPIs
+    total_companies = db.query(CorporateEntity).count()
+    all_compliance = db.query(ComplianceActivity).order_by(ComplianceActivity.due_date_bs.asc()).all()
+    pending_compliance = [
+        a for a in all_compliance if "Completed" not in (a.status or "") and "सम्पन्न" not in (a.status or "")
+    ]
+
     # Upcoming / Today's hearings (दैनिक तथा आगामी पेशी सूची)
     upcoming_cases = (
         db.query(LegalCase)
@@ -74,7 +84,7 @@ def get_dashboard_stats(
         for c in upcoming_cases
     ]
 
-    # Case distribution by type (मुद्दाको प्रकार अनुसार विवरण)
+    # Case distribution by type
     type_counts: dict[str, int] = {}
     court_counts: dict[str, int] = {}
     for c in all_cases:
@@ -89,10 +99,15 @@ def get_dashboard_stats(
         .all()
     )
 
+    # Active Module Subscriptions
+    modules = db.query(SystemModuleConfig).all()
+    module_flags = {m.module_key: m.is_enabled for m in modules}
+
     return {
         "today_bs": current_bs,
         "today_bs_human": format_bs_human(current_bs),
         "today_ad": date.today().isoformat(),
+        "module_flags": module_flags,
         "counts": {
             "total_clients": total_clients,
             "total_cases": total_cases,
@@ -102,6 +117,8 @@ def get_dashboard_stats(
             "total_staff": total_staff,
             "total_documents": total_docs,
             "original_docs_held": original_docs_held,
+            "total_companies": total_companies,
+            "pending_compliance_count": len(pending_compliance),
         },
         "financials": {
             "total_deal_amount": round(total_deal, 2),
@@ -110,6 +127,21 @@ def get_dashboard_stats(
             "collection_rate": round((total_paid / total_deal * 100), 1) if total_deal > 0 else 0.0,
         },
         "cause_list": cause_list,
+        "upcoming_compliance": [
+            {
+                "id": a.id,
+                "company_id": a.company_id,
+                "company_name_en": a.company.company_name_en if a.company else "",
+                "company_name_np": a.company.company_name_np if a.company else "",
+                "category": a.category,
+                "activity_type": a.activity_type,
+                "fiscal_year": a.fiscal_year,
+                "due_date_bs": a.due_date_bs,
+                "status": a.status,
+                "priority": a.priority,
+            }
+            for a in pending_compliance[:8]
+        ],
         "case_type_distribution": type_counts,
         "court_distribution": court_counts,
         "recent_hearings": [
@@ -134,7 +166,6 @@ def conflict_of_interest_check(
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
 ):
-    """विपक्षी वा क्लाइन्ट द्वन्द्व जाँच (Conflict of Interest Search across Clients & Opponents)."""
     term = f"%{q.strip()}%"
     matched_clients = (
         db.query(Client)
@@ -194,7 +225,6 @@ def convert_date(
     bs: Optional[str] = Query(None, description="BS date YYYY-MM-DD"),
     ad: Optional[str] = Query(None, description="AD date YYYY-MM-DD"),
 ):
-    """विक्रम संवत् (BS) र ई.सं. (AD) मिति रूपान्तरण सेवा."""
     if bs:
         converted_ad = bs_to_ad(bs)
         return {
