@@ -12,6 +12,8 @@ if ! docker ps --format '{{.Names}}' | grep -q "^vidhi_lawfirm_app$" || ! docker
   ./scripts/deploy_to_vps.sh
 fi
 
-echo "[*] Executing transactional cleanup inside 'vidhi_lawfirm_app' container..."
+echo "[*] Syncing latest database lock & cleanup script into 'vidhi_lawfirm_app'..."
+docker cp app/database.py vidhi_lawfirm_app:/app/app/database.py
+docker cp app/main.py vidhi_lawfirm_app:/app/app/main.py
 docker cp scripts/clear_transactional_data.py vidhi_lawfirm_app:/app/clear_transactional_data.py
 docker exec -i vidhi_lawfirm_app python /app/clear_transactional_data.py $ARGS

@@ -33,9 +33,7 @@ templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
     upgrade_schema_for_multitenancy()
-    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         seed_initial_data(db)

@@ -73,8 +73,8 @@ engine = build_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def upgrade_schema_for_multitenancy():
-    """Safely upgrade existing tables to add tenant_id and multi-tenant columns without data loss."""
+def _run_schema_upgrade():
+    """Internal helper to upgrade existing tables to add tenant_id and multi-tenant columns."""
     inspector = inspect(engine)
     existing_tables = inspector.get_table_names()
 
@@ -114,18 +114,38 @@ def upgrade_schema_for_multitenancy():
             if tbl not in existing_tables:
                 continue
             indexes = inspector.get_indexes(tbl)
+            existing_idx_names = {i.get("name") for i in indexes}
             for idx in indexes:
                 if idx.get("unique") and col_name in (idx.get("column_names") or []):
                     idx_name = idx["name"]
+                    mt_idx_name = f"ix_{tbl}_{col_name}_mt"
                     try:
                         if engine.url.drivername.startswith("mysql"):
                             conn.execute(text(f"ALTER TABLE `{tbl}` DROP INDEX `{idx_name}`"))
-                            conn.execute(text(f"CREATE INDEX `ix_{tbl}_{col_name}_mt` ON `{tbl}` (`{col_name}`)"))
+                            if mt_idx_name not in existing_idx_names:
+                                conn.execute(text(f"CREATE INDEX `{mt_idx_name}` ON `{tbl}` (`{col_name}`)"))
                         else:
                             conn.execute(text(f"DROP INDEX IF EXISTS `{idx_name}`"))
-                            conn.execute(text(f"CREATE INDEX IF NOT EXISTS `ix_{tbl}_{col_name}_mt` ON `{tbl}` (`{col_name}`)"))
+                            conn.execute(text(f"CREATE INDEX IF NOT EXISTS `{mt_idx_name}` ON `{tbl}` (`{col_name}`)"))
                     except Exception:
                         pass
+
+
+def upgrade_schema_for_multitenancy():
+    """Safely upgrade schema using a MySQL advisory lock to prevent concurrent DDL collisions across workers."""
+    if engine.url.drivername.startswith("mysql"):
+        with engine.connect() as lock_conn:
+            lock_conn.execute(text("SELECT GET_LOCK('vidhi_lawfirm_ddl_lock', 60)"))
+            try:
+                Base.metadata.create_all(bind=engine)
+                _run_schema_upgrade()
+                Base.metadata.create_all(bind=engine)
+            finally:
+                lock_conn.execute(text("SELECT RELEASE_LOCK('vidhi_lawfirm_ddl_lock')"))
+    else:
+        Base.metadata.create_all(bind=engine)
+        _run_schema_upgrade()
+        Base.metadata.create_all(bind=engine)
 
 
 def get_db():

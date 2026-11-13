@@ -69,9 +69,7 @@ def clear_all_transactional_data(clean_demo_users: bool = False, tenant_id: int 
     print(" Vidhi CMS — Clearing Transactional Data & Refreshing MDM Master Data")
     print("======================================================================")
 
-    Base.metadata.create_all(bind=engine)
     upgrade_schema_for_multitenancy()
-    Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
     try:
@@ -99,16 +97,22 @@ def clear_all_transactional_data(clean_demo_users: bool = False, tenant_id: int 
             # Reset AUTO_INCREMENT on MySQL so new production records start at ID 1
             if "mysql" in engine.url.drivername:
                 with engine.begin() as conn:
-                    for tbl in TRANSACTIONAL_TABLES:
-                        try:
-                            conn.execute(text(f"ALTER TABLE {tbl} AUTO_INCREMENT = 1"))
-                        except Exception:
-                            pass
+                    conn.execute(text("SELECT GET_LOCK('vidhi_lawfirm_ddl_lock', 60)"))
+                    try:
+                        for tbl in TRANSACTIONAL_TABLES:
+                            try:
+                                conn.execute(text(f"ALTER TABLE {tbl} AUTO_INCREMENT = 1"))
+                            except Exception:
+                                pass
+                    finally:
+                        conn.execute(text("SELECT RELEASE_LOCK('vidhi_lawfirm_ddl_lock')"))
 
         if clean_demo_users:
-            print("-> Removing demo non-admin staff accounts (sunita, dipak, kamal, asmita)...")
+            print("-> Removing demo non-admin staff accounts...")
             db.query(StaffMember).filter(
-                StaffMember.username.in_(["sunita", "dipak", "kamal", "asmita"])
+                StaffMember.username.in_(
+                    ["sunita", "dipak", "kamal", "asmita", "ram_adv", "sita_adv", "hari_acc", "gita_sec"]
+                )
             ).delete(synchronize_session=False)
             db.commit()
 
