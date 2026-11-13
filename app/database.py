@@ -1,6 +1,6 @@
 import logging
 import pymysql
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import settings
@@ -45,7 +45,6 @@ def ensure_mysql_database_exists() -> bool:
             conn.close()
     except Exception as exc:
         logger.warning("Could not auto-create or verify MySQL database (%s).", exc)
-        # Still return True if DATABASE_URL_OVERRIDE is explicitly provided so SQLAlchemy connects directly
         if settings.DATABASE_URL_OVERRIDE:
             return True
         return False
@@ -72,6 +71,61 @@ def build_engine():
 
 engine = build_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def upgrade_schema_for_multitenancy():
+    """Safely upgrade existing tables to add tenant_id and multi-tenant columns without data loss."""
+    inspector = inspect(engine)
+    existing_tables = inspector.get_table_names()
+
+    tenant_scoped_tables = [
+        "system_module_configs",
+        "staff_members",
+        "clients",
+        "legal_cases",
+        "hearings",
+        "payment_records",
+        "case_documents",
+        "corporate_entities",
+        "compliance_activities",
+    ]
+
+    with engine.begin() as conn:
+        for tbl in tenant_scoped_tables:
+            if tbl in existing_tables:
+                cols = [c["name"] for c in inspector.get_columns(tbl)]
+                if "tenant_id" not in cols:
+                    conn.execute(text(f"ALTER TABLE `{tbl}` ADD COLUMN `tenant_id` INTEGER NOT NULL DEFAULT 1"))
+                    logger.info("Added tenant_id column to %s", tbl)
+
+        if "staff_members" in existing_tables:
+            staff_cols = [c["name"] for c in inspector.get_columns("staff_members")]
+            if "is_superadmin" not in staff_cols:
+                conn.execute(text("ALTER TABLE `staff_members` ADD COLUMN `is_superadmin` BOOLEAN NOT NULL DEFAULT 0"))
+
+        # Drop old single-tenant unique constraints/indexes so multiple tenants can use the same module_key, case_number, etc.
+        legacy_unique_cols = {
+            "system_module_configs": "module_key",
+            "legal_cases": "case_number",
+            "payment_records": "receipt_number",
+            "corporate_entities": "ocr_registration_no",
+        }
+        for tbl, col_name in legacy_unique_cols.items():
+            if tbl not in existing_tables:
+                continue
+            indexes = inspector.get_indexes(tbl)
+            for idx in indexes:
+                if idx.get("unique") and col_name in (idx.get("column_names") or []):
+                    idx_name = idx["name"]
+                    try:
+                        if engine.url.drivername.startswith("mysql"):
+                            conn.execute(text(f"ALTER TABLE `{tbl}` DROP INDEX `{idx_name}`"))
+                            conn.execute(text(f"CREATE INDEX `ix_{tbl}_{col_name}_mt` ON `{tbl}` (`{col_name}`)"))
+                        else:
+                            conn.execute(text(f"DROP INDEX IF EXISTS `{idx_name}`"))
+                            conn.execute(text(f"CREATE INDEX IF NOT EXISTS `ix_{tbl}_{col_name}_mt` ON `{tbl}` (`{col_name}`)"))
+                    except Exception:
+                        pass
 
 
 def get_db():

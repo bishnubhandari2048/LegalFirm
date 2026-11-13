@@ -7,7 +7,7 @@ from app.config import settings
 from app.database import get_db
 from app.models import CaseDocument, LegalCase, Client, StaffMember
 from app.schemas import CaseDocumentCreate, CaseDocumentUpdate
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_tenant_id
 from app.bs_calendar import bs_to_ad, format_bs_human
 
 router = APIRouter(prefix="/api/documents", tags=["Documents / कागजात सम्बन्धी विवरण"])
@@ -18,6 +18,7 @@ def serialize_document(d: CaseDocument) -> dict:
     cl = d.client or (c.client if c else None)
     return {
         "id": d.id,
+        "tenant_id": d.tenant_id,
         "case_id": d.case_id,
         "case_number": c.case_number if c else "",
         "court_name": c.court_name if c else "",
@@ -50,8 +51,13 @@ def list_documents(
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    query = db.query(CaseDocument).join(LegalCase)
+    query = (
+        db.query(CaseDocument)
+        .filter(CaseDocument.tenant_id == tenant_id)
+        .join(LegalCase)
+    )
     if case_id:
         query = query.filter(CaseDocument.case_id == case_id)
     if client_id:
@@ -80,8 +86,13 @@ def create_document(
     payload: CaseDocumentCreate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    legal_case = db.query(LegalCase).filter(LegalCase.id == payload.case_id).first()
+    legal_case = (
+        db.query(LegalCase)
+        .filter(LegalCase.id == payload.case_id, LegalCase.tenant_id == tenant_id)
+        .first()
+    )
     if not legal_case:
         raise HTTPException(status_code=404, detail="सम्बन्धित मुद्दा भेटिएन")
 
@@ -89,6 +100,7 @@ def create_document(
     ret_ad = payload.returned_date_ad or bs_to_ad(payload.returned_date_bs)
 
     doc = CaseDocument(
+        tenant_id=tenant_id,
         case_id=legal_case.id,
         client_id=payload.client_id or legal_case.client_id,
         document_name=payload.document_name.strip(),
@@ -120,8 +132,13 @@ async def create_document_with_file(
     file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    legal_case = db.query(LegalCase).filter(LegalCase.id == case_id).first()
+    legal_case = (
+        db.query(LegalCase)
+        .filter(LegalCase.id == case_id, LegalCase.tenant_id == tenant_id)
+        .first()
+    )
     if not legal_case:
         raise HTTPException(status_code=404, detail="सम्बन्धित मुद्दा भेटिएन")
 
@@ -130,7 +147,7 @@ async def create_document_with_file(
     if file and file.filename:
         orig_filename = file.filename
         ext = os.path.splitext(file.filename)[1] or ".bin"
-        unique_name = f"doc_{case_id}_{uuid.uuid4().hex[:8]}{ext}"
+        unique_name = f"t{tenant_id}_doc_{case_id}_{uuid.uuid4().hex[:8]}{ext}"
         dest = settings.UPLOAD_DIR / unique_name
         content = await file.read()
         with open(dest, "wb") as f:
@@ -138,6 +155,7 @@ async def create_document_with_file(
         saved_url = f"/static/uploads/{unique_name}"
 
     doc = CaseDocument(
+        tenant_id=tenant_id,
         case_id=legal_case.id,
         client_id=legal_case.client_id,
         document_name=document_name.strip(),
@@ -164,8 +182,13 @@ def update_document(
     payload: CaseDocumentUpdate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    doc = db.query(CaseDocument).filter(CaseDocument.id == doc_id).first()
+    doc = (
+        db.query(CaseDocument)
+        .filter(CaseDocument.id == doc_id, CaseDocument.tenant_id == tenant_id)
+        .first()
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="कागजातको विवरण भेटिएन")
 
@@ -190,8 +213,13 @@ def delete_document(
     doc_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    doc = db.query(CaseDocument).filter(CaseDocument.id == doc_id).first()
+    doc = (
+        db.query(CaseDocument)
+        .filter(CaseDocument.id == doc_id, CaseDocument.tenant_id == tenant_id)
+        .first()
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="कागजातको विवरण भेटिएन")
     db.delete(doc)

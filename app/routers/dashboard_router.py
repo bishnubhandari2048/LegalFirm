@@ -14,8 +14,9 @@ from app.models import (
     CorporateEntity,
     ComplianceActivity,
     SystemModuleConfig,
+    Tenant,
 )
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_tenant_id
 from app.bs_calendar import today_bs, ad_to_bs, bs_to_ad, format_bs_human
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard & Legal Utilities / ड्यासबोर्ड"])
@@ -25,10 +26,13 @@ router = APIRouter(prefix="/api/dashboard", tags=["Dashboard & Legal Utilities /
 def get_dashboard_stats(
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
     current_bs = today_bs()
-    total_clients = db.query(Client).count()
-    all_cases = db.query(LegalCase).all()
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+
+    total_clients = db.query(Client).filter(Client.tenant_id == tenant_id).count()
+    all_cases = db.query(LegalCase).filter(LegalCase.tenant_id == tenant_id).all()
     total_cases = len(all_cases)
     active_cases = sum(1 for c in all_cases if "फैसला" not in (c.status or "") and "मिलापत्र" not in (c.status or ""))
     decided_cases = total_cases - active_cases
@@ -37,21 +41,38 @@ def get_dashboard_stats(
     total_paid = sum(c.paid_amount or 0.0 for c in all_cases)
     total_due = sum(c.due_amount or 0.0 for c in all_cases)
 
-    total_advocates = db.query(StaffMember).filter(StaffMember.role.in_(["advocate", "admin"])).count()
-    total_staff = db.query(StaffMember).filter(StaffMember.role == "staff").count()
-    total_docs = db.query(CaseDocument).count()
+    total_advocates = (
+        db.query(StaffMember)
+        .filter(
+            StaffMember.tenant_id == tenant_id,
+            StaffMember.role.in_(["advocate", "admin"]),
+        )
+        .count()
+    )
+    total_staff = (
+        db.query(StaffMember)
+        .filter(StaffMember.tenant_id == tenant_id, StaffMember.role == "staff")
+        .count()
+    )
+    total_docs = db.query(CaseDocument).filter(CaseDocument.tenant_id == tenant_id).count()
     original_docs_held = (
         db.query(CaseDocument)
         .filter(
+            CaseDocument.tenant_id == tenant_id,
             CaseDocument.document_type.ilike("%मूल%"),
             CaseDocument.status.ilike("%सुरक्षित%"),
         )
         .count()
     )
 
-    # Company Management (OCR + IRD Tax + Audit) KPIs
-    total_companies = db.query(CorporateEntity).count()
-    all_compliance = db.query(ComplianceActivity).order_by(ComplianceActivity.due_date_bs.asc()).all()
+    # Company Management (OCR + IRD Tax + Audit) KPIs scoped by tenant
+    total_companies = db.query(CorporateEntity).filter(CorporateEntity.tenant_id == tenant_id).count()
+    all_compliance = (
+        db.query(ComplianceActivity)
+        .filter(ComplianceActivity.tenant_id == tenant_id)
+        .order_by(ComplianceActivity.due_date_bs.asc())
+        .all()
+    )
     pending_compliance = [
         a for a in all_compliance if "Completed" not in (a.status or "") and "सम्पन्न" not in (a.status or "")
     ]
@@ -59,7 +80,11 @@ def get_dashboard_stats(
     # Upcoming / Today's hearings (दैनिक तथा आगामी पेशी सूची)
     upcoming_cases = (
         db.query(LegalCase)
-        .filter(LegalCase.next_hearing_date_bs.isnot(None), LegalCase.next_hearing_date_bs != "")
+        .filter(
+            LegalCase.tenant_id == tenant_id,
+            LegalCase.next_hearing_date_bs.isnot(None),
+            LegalCase.next_hearing_date_bs != "",
+        )
         .order_by(LegalCase.next_hearing_date_bs.asc())
         .limit(12)
         .all()
@@ -94,16 +119,20 @@ def get_dashboard_stats(
     # Recent hearings
     recent_hearings = (
         db.query(Hearing)
+        .filter(Hearing.tenant_id == tenant_id)
         .order_by(Hearing.hearing_date_bs.desc(), Hearing.id.desc())
         .limit(6)
         .all()
     )
 
-    # Active Module Subscriptions
-    modules = db.query(SystemModuleConfig).all()
+    # Active Module Subscriptions for this Tenant
+    modules = db.query(SystemModuleConfig).filter(SystemModuleConfig.tenant_id == tenant_id).all()
     module_flags = {m.module_key: m.is_enabled for m in modules}
 
     return {
+        "tenant_id": tenant_id,
+        "tenant_name_en": tenant.firm_name_en if tenant else "",
+        "tenant_name_np": tenant.firm_name_np if tenant else "",
         "today_bs": current_bs,
         "today_bs_human": format_bs_human(current_bs),
         "today_ad": date.today().isoformat(),
@@ -165,34 +194,38 @@ def conflict_of_interest_check(
     q: str = Query(..., min_length=1, description="Name, citizenship or phone to check across clients & opponents"),
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
     term = f"%{q.strip()}%"
     matched_clients = (
         db.query(Client)
         .filter(
+            Client.tenant_id == tenant_id,
             or_(
                 Client.full_name.ilike(term),
                 Client.citizenship_no.ilike(term),
                 Client.phone.ilike(term),
-            )
+            ),
         )
         .all()
     )
     matched_cases = (
         db.query(LegalCase)
         .filter(
+            LegalCase.tenant_id == tenant_id,
             or_(
                 LegalCase.opponent_name.ilike(term),
                 LegalCase.opponent_contact.ilike(term),
                 LegalCase.case_number.ilike(term),
                 LegalCase.case_title.ilike(term),
-            )
+            ),
         )
         .all()
     )
 
     return {
         "query": q,
+        "tenant_id": tenant_id,
         "has_conflict": len(matched_cases) > 0 or len(matched_clients) > 0,
         "matched_as_client": [
             {
@@ -201,7 +234,7 @@ def conflict_of_interest_check(
                 "phone": cl.phone,
                 "citizenship_no": cl.citizenship_no,
                 "address": cl.address,
-                "cases_count": len(cl.cases or []),
+                "cases_count": len([c for c in (cl.cases or []) if c.tenant_id == tenant_id]),
             }
             for cl in matched_clients
         ],

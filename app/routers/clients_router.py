@@ -5,18 +5,19 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Client, LegalCase, StaffMember
 from app.schemas import ClientCreate, ClientUpdate
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_tenant_id
 
 router = APIRouter(prefix="/api/clients", tags=["Clients / क्लाइन्टको विवरण"])
 
 
 def serialize_client(client: Client) -> dict:
-    cases = client.cases or []
+    cases = [c for c in (client.cases or []) if c.tenant_id == client.tenant_id]
     total_deal = sum(c.deal_amount or 0.0 for c in cases)
     total_paid = sum(c.paid_amount or 0.0 for c in cases)
     total_due = sum(c.due_amount or 0.0 for c in cases)
     return {
         "id": client.id,
+        "tenant_id": client.tenant_id,
         "first_name": client.first_name,
         "last_name": client.last_name,
         "full_name": client.full_name,
@@ -56,8 +57,9 @@ def list_clients(
     search: Optional[str] = Query(None, description="Search by name, phone, citizenship, address"),
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    query = db.query(Client)
+    query = db.query(Client).filter(Client.tenant_id == tenant_id)
     if search:
         term = f"%{search.strip()}%"
         query = query.filter(
@@ -80,10 +82,15 @@ def get_client(
     client_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    client = db.query(Client).filter(Client.id == client_id).first()
+    client = (
+        db.query(Client)
+        .filter(Client.id == client_id, Client.tenant_id == tenant_id)
+        .first()
+    )
     if not client:
-        raise HTTPException(status_code=404, detail="क्लाइन्ट भेटिएन (Client not found)")
+        raise HTTPException(status_code=404, detail="क्लाइन्ट भेटिएन (Client not found in your firm)")
     return serialize_client(client)
 
 
@@ -92,9 +99,11 @@ def create_client(
     payload: ClientCreate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
     full_name = f"{payload.first_name.strip()} {payload.last_name.strip()}".strip()
     client = Client(
+        tenant_id=tenant_id,
         first_name=payload.first_name.strip(),
         last_name=payload.last_name.strip(),
         full_name=full_name,
@@ -122,8 +131,13 @@ def update_client(
     payload: ClientUpdate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    client = db.query(Client).filter(Client.id == client_id).first()
+    client = (
+        db.query(Client)
+        .filter(Client.id == client_id, Client.tenant_id == tenant_id)
+        .first()
+    )
     if not client:
         raise HTTPException(status_code=404, detail="क्लाइन्ट भेटिएन (Client not found)")
 
@@ -142,8 +156,13 @@ def delete_client(
     client_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    client = db.query(Client).filter(Client.id == client_id).first()
+    client = (
+        db.query(Client)
+        .filter(Client.id == client_id, Client.tenant_id == tenant_id)
+        .first()
+    )
     if not client:
         raise HTTPException(status_code=404, detail="क्लाइन्ट भेटिएन")
     db.delete(client)

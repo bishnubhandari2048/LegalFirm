@@ -5,16 +5,25 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import StaffMember, LegalCase
 from app.schemas import StaffMemberCreate, StaffMemberUpdate
-from app.auth import get_current_user, hash_password
+from app.auth import get_current_user, get_current_tenant_id, hash_password
 
 router = APIRouter(prefix="/api/staff", tags=["Advocates & Staff / वकिल तथा कर्मचारी विवरण"])
 
 
 def serialize_staff(member: StaffMember, db: Session) -> dict:
-    lead_count = db.query(LegalCase).filter(LegalCase.advocate_id == member.id).count()
-    assist_count = db.query(LegalCase).filter(LegalCase.assistant_id == member.id).count()
+    lead_count = (
+        db.query(LegalCase)
+        .filter(LegalCase.tenant_id == member.tenant_id, LegalCase.advocate_id == member.id)
+        .count()
+    )
+    assist_count = (
+        db.query(LegalCase)
+        .filter(LegalCase.tenant_id == member.tenant_id, LegalCase.assistant_id == member.id)
+        .count()
+    )
     return {
         "id": member.id,
+        "tenant_id": member.tenant_id,
         "full_name": member.full_name,
         "role": member.role,
         "designation": member.designation,
@@ -40,8 +49,9 @@ def list_staff(
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    query = db.query(StaffMember)
+    query = db.query(StaffMember).filter(StaffMember.tenant_id == tenant_id)
     if role:
         if role == "advocate":
             query = query.filter(StaffMember.role.in_(["advocate", "admin"]))
@@ -67,17 +77,17 @@ def create_staff(
     payload: StaffMemberCreate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
     existing = db.query(StaffMember).filter(StaffMember.username == payload.username.strip()).first()
     if existing:
-        raise HTTPException(status_code=400, detail="यो प्रयोगकर्ता नाम (username) पहिले नै दर्ता छ")
-
-    if payload.email:
-        email_check = db.query(StaffMember).filter(StaffMember.email == payload.email.strip()).first()
-        if email_check:
-            raise HTTPException(status_code=400, detail="यो इमेल पहिले नै प्रयोगमा छ")
+        raise HTTPException(
+            status_code=400,
+            detail="यो प्रयोगकर्ता नाम (username) पहिले नै दर्ता छ (Username already taken across platform)",
+        )
 
     member = StaffMember(
+        tenant_id=tenant_id,
         full_name=payload.full_name.strip(),
         role=payload.role,
         designation=payload.designation,
@@ -104,8 +114,13 @@ def update_staff(
     payload: StaffMemberUpdate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    member = db.query(StaffMember).filter(StaffMember.id == staff_id).first()
+    member = (
+        db.query(StaffMember)
+        .filter(StaffMember.id == staff_id, StaffMember.tenant_id == tenant_id)
+        .first()
+    )
     if not member:
         raise HTTPException(status_code=404, detail="वकिल वा कर्मचारी भेटिएन")
 
@@ -130,8 +145,13 @@ def delete_staff(
     staff_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    member = db.query(StaffMember).filter(StaffMember.id == staff_id).first()
+    member = (
+        db.query(StaffMember)
+        .filter(StaffMember.id == staff_id, StaffMember.tenant_id == tenant_id)
+        .first()
+    )
     if not member:
         raise HTTPException(status_code=404, detail="वकिल वा कर्मचारी भेटिएन")
     if member.id == current_user.id:

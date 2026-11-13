@@ -10,7 +10,7 @@ from app.schemas import (
     ComplianceActivityCreate,
     ComplianceActivityUpdate,
 )
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_tenant_id
 from app.bs_calendar import bs_to_ad, format_bs_human, today_bs
 
 router = APIRouter(
@@ -23,6 +23,7 @@ def serialize_activity(a: ComplianceActivity) -> dict:
     comp = a.company
     return {
         "id": a.id,
+        "tenant_id": a.tenant_id,
         "company_id": a.company_id,
         "company_name_en": comp.company_name_en if comp else "",
         "company_name_np": comp.company_name_np or (comp.company_name_en if comp else ""),
@@ -52,7 +53,7 @@ def serialize_activity(a: ComplianceActivity) -> dict:
 
 
 def serialize_company(c: CorporateEntity, include_activities: bool = False) -> dict:
-    acts = c.activities or []
+    acts = [a for a in (c.activities or []) if a.tenant_id == c.tenant_id]
     pending_ocr = sum(1 for a in acts if a.category == "OCR" and "Completed" not in a.status and "सम्पन्न" not in a.status)
     pending_ird = sum(1 for a in acts if a.category == "IRD_TAX" and "Completed" not in a.status and "सम्पन्न" not in a.status)
     pending_audit = sum(1 for a in acts if a.category == "AUDIT" and "Completed" not in a.status and "सम्पन्न" not in a.status)
@@ -67,6 +68,7 @@ def serialize_company(c: CorporateEntity, include_activities: bool = False) -> d
 
     data = {
         "id": c.id,
+        "tenant_id": c.tenant_id,
         "company_name_en": c.company_name_en,
         "company_name_np": c.company_name_np or c.company_name_en,
         "company_type": c.company_type,
@@ -119,9 +121,11 @@ def generate_standard_periodic_activities(
 ):
     """Auto-generate Nepal Statutory OCR, IRD Tax & Audit periodic checklist for a company."""
     fy_prefix = fiscal_year.split("/")[0] if "/" in fiscal_year else "2083"
+    tid = company.tenant_id
     standard_items = [
         # 1. OCR Activities
         ComplianceActivity(
+            tenant_id=tid,
             company_id=company.id,
             category="OCR",
             activity_type="Section 78 Annual Return & AGM Minutes Filing (दफा ७८ वार्षिक विवरण तथा साधारण सभा)",
@@ -136,6 +140,7 @@ def generate_standard_periodic_activities(
             remarks="कम्पनी ऐन, २०६३ दफा ७८ बमोजिम पुस मसान्तभित्र लेखापरीक्षण प्रतिवेदन र साधारण सभा निर्णय पेश गर्नुपर्ने (अन्यथा जरिवाना लाग्ने)।",
         ),
         ComplianceActivity(
+            tenant_id=tid,
             company_id=company.id,
             category="OCR",
             activity_type="Section 51 Shareholding & Capital Lagat Report (दफा ५१ शेयर लगत विवरण)",
@@ -151,6 +156,7 @@ def generate_standard_periodic_activities(
         ),
         # 2. IRD Tax Activities
         ComplianceActivity(
+            tenant_id=tid,
             company_id=company.id,
             category="IRD_TAX",
             activity_type="Monthly VAT & e-TDS Return Filing (मासिक मु.अ.कर तथा ई-टीडीएस विवरण)",
@@ -165,6 +171,7 @@ def generate_standard_periodic_activities(
             remarks="आन्तरिक राजस्व विभाग (IRD Portal) मा खरिद-बिक्री खाता रुजु गरी भ्याट र अग्रिम कर कट्टी (e-TDS) दाखिला।",
         ),
         ComplianceActivity(
+            tenant_id=tid,
             company_id=company.id,
             category="IRD_TAX",
             activity_type="Estimated Income Tax Return & 1st Installment 40% (अनुमानित आयकर विवरण र प्रथम किस्ता ४०%)",
@@ -179,6 +186,7 @@ def generate_standard_periodic_activities(
             remarks="आयकर ऐन, २०५८ बमोजिम पुस मसान्तभित्र अनुमानित करको ४०% प्रथम किस्ता दाखिला।",
         ),
         ComplianceActivity(
+            tenant_id=tid,
             company_id=company.id,
             category="IRD_TAX",
             activity_type="Annual Income Tax Return D-03 & Tax Clearance Certificate (आयकर विवरण D-03 र कर चुक्ता प्रमाणपत्र)",
@@ -194,6 +202,7 @@ def generate_standard_periodic_activities(
         ),
         # 3. Statutory Audit & AGM Activities
         ComplianceActivity(
+            tenant_id=tid,
             company_id=company.id,
             category="AUDIT",
             activity_type="Statutory Audit Report & UDIN Verification (वैधानिक लेखापरीक्षण र UDIN प्रमाणीकरण)",
@@ -216,10 +225,21 @@ def generate_standard_periodic_activities(
 def get_company_module_summary(
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
     cur_bs = today_bs()
-    companies = db.query(CorporateEntity).order_by(CorporateEntity.id.desc()).all()
-    activities = db.query(ComplianceActivity).order_by(ComplianceActivity.due_date_bs.asc()).all()
+    companies = (
+        db.query(CorporateEntity)
+        .filter(CorporateEntity.tenant_id == tenant_id)
+        .order_by(CorporateEntity.id.desc())
+        .all()
+    )
+    activities = (
+        db.query(ComplianceActivity)
+        .filter(ComplianceActivity.tenant_id == tenant_id)
+        .order_by(ComplianceActivity.due_date_bs.asc())
+        .all()
+    )
 
     ocr_pending = [a for a in activities if a.category == "OCR" and "Completed" not in a.status and "सम्पन्न" not in a.status]
     ird_pending = [a for a in activities if a.category == "IRD_TAX" and "Completed" not in a.status and "सम्पन्न" not in a.status]
@@ -261,8 +281,9 @@ def list_companies(
     company_type: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    query = db.query(CorporateEntity)
+    query = db.query(CorporateEntity).filter(CorporateEntity.tenant_id == tenant_id)
     if search:
         term = f"%{search.strip()}%"
         query = query.filter(
@@ -287,8 +308,13 @@ def get_company_detail(
     company_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    comp = db.query(CorporateEntity).filter(CorporateEntity.id == company_id).first()
+    comp = (
+        db.query(CorporateEntity)
+        .filter(CorporateEntity.id == company_id, CorporateEntity.tenant_id == tenant_id)
+        .first()
+    )
     if not comp:
         raise HTTPException(status_code=404, detail="कम्पनीको विवरण भेटिएन (Company not found)")
     return serialize_company(comp, include_activities=True)
@@ -299,10 +325,14 @@ def create_company(
     payload: CorporateEntityCreate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
     existing = (
         db.query(CorporateEntity)
-        .filter(CorporateEntity.ocr_registration_no == payload.ocr_registration_no.strip())
+        .filter(
+            CorporateEntity.tenant_id == tenant_id,
+            CorporateEntity.ocr_registration_no == payload.ocr_registration_no.strip(),
+        )
         .first()
     )
     if existing:
@@ -313,6 +343,7 @@ def create_company(
     due = max(0.0, retainer - paid)
 
     comp = CorporateEntity(
+        tenant_id=tenant_id,
         company_name_en=payload.company_name_en.strip(),
         company_name_np=payload.company_name_np.strip() if payload.company_name_np else payload.company_name_en.strip(),
         company_type=payload.company_type,
@@ -364,8 +395,13 @@ def update_company(
     payload: CorporateEntityUpdate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    comp = db.query(CorporateEntity).filter(CorporateEntity.id == company_id).first()
+    comp = (
+        db.query(CorporateEntity)
+        .filter(CorporateEntity.id == company_id, CorporateEntity.tenant_id == tenant_id)
+        .first()
+    )
     if not comp:
         raise HTTPException(status_code=404, detail="कम्पनी भेटिएन")
 
@@ -384,8 +420,13 @@ def delete_company(
     company_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    comp = db.query(CorporateEntity).filter(CorporateEntity.id == company_id).first()
+    comp = (
+        db.query(CorporateEntity)
+        .filter(CorporateEntity.id == company_id, CorporateEntity.tenant_id == tenant_id)
+        .first()
+    )
     if not comp:
         raise HTTPException(status_code=404, detail="कम्पनी भेटिएन")
     db.delete(comp)
@@ -402,8 +443,13 @@ def list_compliance_activities(
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    query = db.query(ComplianceActivity).join(CorporateEntity)
+    query = (
+        db.query(ComplianceActivity)
+        .filter(ComplianceActivity.tenant_id == tenant_id)
+        .join(CorporateEntity)
+    )
     if company_id:
         query = query.filter(ComplianceActivity.company_id == company_id)
     if category:
@@ -434,12 +480,18 @@ def create_compliance_activity(
     payload: ComplianceActivityCreate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    comp = db.query(CorporateEntity).filter(CorporateEntity.id == payload.company_id).first()
+    comp = (
+        db.query(CorporateEntity)
+        .filter(CorporateEntity.id == payload.company_id, CorporateEntity.tenant_id == tenant_id)
+        .first()
+    )
     if not comp:
         raise HTTPException(status_code=404, detail="कम्पनी भेटिएन")
 
     act = ComplianceActivity(
+        tenant_id=tenant_id,
         company_id=comp.id,
         category=payload.category,
         activity_type=payload.activity_type.strip(),
@@ -461,7 +513,6 @@ def create_compliance_activity(
     )
     db.add(act)
 
-    # If a Tax Clearance activity is marked Completed, update the parent company's tax_clearance_upto_fy
     if "Tax Clearance" in act.activity_type and ("Completed" in act.status or "सम्पन्न" in act.status):
         comp.tax_clearance_upto_fy = act.fiscal_year
 
@@ -476,8 +527,13 @@ def update_compliance_activity(
     payload: ComplianceActivityUpdate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    act = db.query(ComplianceActivity).filter(ComplianceActivity.id == activity_id).first()
+    act = (
+        db.query(ComplianceActivity)
+        .filter(ComplianceActivity.id == activity_id, ComplianceActivity.tenant_id == tenant_id)
+        .first()
+    )
     if not act:
         raise HTTPException(status_code=404, detail="कार्य विवरण भेटिएन")
 
@@ -501,8 +557,13 @@ def delete_compliance_activity(
     activity_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    act = db.query(ComplianceActivity).filter(ComplianceActivity.id == activity_id).first()
+    act = (
+        db.query(ComplianceActivity)
+        .filter(ComplianceActivity.id == activity_id, ComplianceActivity.tenant_id == tenant_id)
+        .first()
+    )
     if not act:
         raise HTTPException(status_code=404, detail="कार्य विवरण भेटिएन")
     db.delete(act)

@@ -3,9 +3,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import PaymentRecord, LegalCase, Client, StaffMember
+from app.models import PaymentRecord, LegalCase, Client, StaffMember, Tenant
 from app.schemas import PaymentCreate, DealAmountUpdate
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_tenant_id
 from app.bs_calendar import bs_to_ad, format_bs_human
 from app.routers.cases_router import recalculate_case_financials
 
@@ -17,6 +17,7 @@ def serialize_payment(p: PaymentRecord) -> dict:
     cl = p.client or (c.client if c else None)
     return {
         "id": p.id,
+        "tenant_id": p.tenant_id,
         "case_id": p.case_id,
         "case_number": c.case_number if c else "",
         "court_name": c.court_name if c else "",
@@ -47,9 +48,15 @@ def serialize_payment(p: PaymentRecord) -> dict:
 def get_financial_summary(
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    cases = db.query(LegalCase).all()
-    payments = db.query(PaymentRecord).order_by(PaymentRecord.id.desc()).all()
+    cases = db.query(LegalCase).filter(LegalCase.tenant_id == tenant_id).all()
+    payments = (
+        db.query(PaymentRecord)
+        .filter(PaymentRecord.tenant_id == tenant_id)
+        .order_by(PaymentRecord.id.desc())
+        .all()
+    )
 
     total_deal = sum(c.deal_amount or 0.0 for c in cases)
     total_paid = sum(c.paid_amount or 0.0 for c in cases)
@@ -103,8 +110,14 @@ def list_payments(
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    query = db.query(PaymentRecord).join(LegalCase).join(Client, PaymentRecord.client_id == Client.id)
+    query = (
+        db.query(PaymentRecord)
+        .filter(PaymentRecord.tenant_id == tenant_id)
+        .join(LegalCase)
+        .join(Client, PaymentRecord.client_id == Client.id)
+    )
     if case_id:
         query = query.filter(PaymentRecord.case_id == case_id)
     if client_id:
@@ -129,8 +142,13 @@ def create_payment(
     payload: PaymentCreate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    legal_case = db.query(LegalCase).filter(LegalCase.id == payload.case_id).first()
+    legal_case = (
+        db.query(LegalCase)
+        .filter(LegalCase.id == payload.case_id, LegalCase.tenant_id == tenant_id)
+        .first()
+    )
     if not legal_case:
         raise HTTPException(status_code=404, detail="सम्बन्धित मुद्दा भेटिएन")
 
@@ -138,16 +156,26 @@ def create_payment(
 
     if payload.receipt_number and payload.receipt_number.strip():
         receipt_no = payload.receipt_number.strip()
-        exists = db.query(PaymentRecord).filter(PaymentRecord.receipt_number == receipt_no).first()
+        exists = (
+            db.query(PaymentRecord)
+            .filter(
+                PaymentRecord.tenant_id == tenant_id,
+                PaymentRecord.receipt_number == receipt_no,
+            )
+            .first()
+        )
         if exists:
             raise HTTPException(status_code=400, detail="यो रसिद नम्बर पहिले नै प्रयोग भइसकेको छ")
     else:
-        count = db.query(PaymentRecord).count() + 1
-        receipt_no = f"RCP-2083-{count:04d}-{int(datetime.utcnow().timestamp()) % 1000:03d}"
+        tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+        prefix = (tenant.receipt_prefix if tenant and tenant.receipt_prefix else "RCP").strip()
+        count = db.query(PaymentRecord).filter(PaymentRecord.tenant_id == tenant_id).count() + 1
+        receipt_no = f"{prefix}-2083-{count:04d}-{int(datetime.utcnow().timestamp()) % 1000:03d}"
 
     pay_ad = payload.payment_date_ad or bs_to_ad(payload.payment_date_bs)
 
     payment = PaymentRecord(
+        tenant_id=tenant_id,
         case_id=legal_case.id,
         client_id=client_id,
         amount=payload.amount,
@@ -175,8 +203,13 @@ def update_case_deal_amount(
     payload: DealAmountUpdate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    legal_case = db.query(LegalCase).filter(LegalCase.id == case_id).first()
+    legal_case = (
+        db.query(LegalCase)
+        .filter(LegalCase.id == case_id, LegalCase.tenant_id == tenant_id)
+        .first()
+    )
     if not legal_case:
         raise HTTPException(status_code=404, detail="मुद्दा भेटिएन")
 
@@ -198,8 +231,13 @@ def delete_payment(
     payment_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    payment = db.query(PaymentRecord).filter(PaymentRecord.id == payment_id).first()
+    payment = (
+        db.query(PaymentRecord)
+        .filter(PaymentRecord.id == payment_id, PaymentRecord.tenant_id == tenant_id)
+        .first()
+    )
     if not payment:
         raise HTTPException(status_code=404, detail="भुक्तानी विवरण भेटिएन")
     legal_case = payment.legal_case

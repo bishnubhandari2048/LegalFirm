@@ -21,17 +21,22 @@
   </div>
 
   <div class="max-w-3xl mx-auto bg-white border-2 border-slate-800 rounded-xl p-8 shadow-lg">
-    <!-- Header -->
+    <!-- Dynamic Tenant Header -->
     <div class="flex justify-between items-start border-b-2 border-slate-800 pb-5 mb-6">
       <div>
         <div class="flex items-center gap-2">
           <span class="text-3xl">⚖️</span>
           <div>
-            <h1 class="text-2xl font-extrabold text-slate-900">विधि ल फर्म एण्ड लिगल कन्सल्टेन्सी</h1>
-            <p class="text-sm font-semibold text-slate-600">VIDHI LAW FIRM & LEGAL CONSULTANCY</p>
+            <h1 class="text-2xl font-extrabold text-slate-900">{{ tenant.firm_name_np if tenant and tenant.firm_name_np else 'विधि ल फर्म एण्ड लिगल कन्सल्टेन्सी' }}</h1>
+            <p class="text-sm font-semibold text-slate-600 uppercase">{{ tenant.firm_name_en if tenant else 'VIDHI LAW FIRM & LEGAL CONSULTANCY' }}</p>
           </div>
         </div>
-        <p class="text-xs text-slate-600 mt-1">अनामनगर, काठमाडौँ, नेपाल | फोन: ०१-४५२३८९०, ९८५१०२३४५६ | इमेल: info@vidhilaw.com.np</p>
+        <p class="text-xs text-slate-600 mt-1">
+          {{ tenant.address if tenant and tenant.address else 'अनामनगर, काठमाडौँ, नेपाल' }}
+          | फोन: {{ tenant.phone if tenant and tenant.phone else '०१-४५२३८९०' }}
+          {% if tenant and tenant.email %}| इमेल: {{ tenant.email }}{% endif %}
+          {% if tenant and tenant.pan_vat_no %}| PAN/VAT: <strong>{{ tenant.pan_vat_no }}</strong>{% endif %}
+        </p>
       </div>
       <div class="text-right">
         <span class="inline-block px-3 py-1 bg-slate-900 text-amber-400 font-bold text-xs rounded uppercase tracking-wider">आधिकारिक नगदी/भुक्तानी रसिद</span>
@@ -105,7 +110,7 @@
       <div class="text-right">
         <p class="mb-6">__________________________</p>
         <p class="font-semibold">बुझिलिने: {{ payment.received_by_name or 'लेखा शाखा' }}</p>
-        <p class="text-[11px] text-slate-400">विधि ल फर्म एण्ड लिगल कन्सल्टेन्सी (छाप र हस्ताक्षर)</p>
+        <p class="text-[11px] text-slate-400">{{ tenant.firm_name_np if tenant and tenant.firm_name_np else 'विधि ल फर्म' }} (छाप र हस्ताक्षर)</p>
       </div>
     </div>
   </div>

@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import SystemModuleConfig, StaffMember
 from app.schemas import ModuleConfigUpdate
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_tenant_id
+from app.routers.tenants_router import provision_tenant_defaults
 
 router = APIRouter(prefix="/api/modules", tags=["Plug-and-Play Modules / मोड्युल व्यवस्थापन"])
 
@@ -11,6 +12,7 @@ router = APIRouter(prefix="/api/modules", tags=["Plug-and-Play Modules / मो�
 def serialize_module(m: SystemModuleConfig) -> dict:
     return {
         "id": m.id,
+        "tenant_id": m.tenant_id,
         "module_key": m.module_key,
         "name_en": m.name_en,
         "name_np": m.name_np,
@@ -28,8 +30,23 @@ def serialize_module(m: SystemModuleConfig) -> dict:
 def list_modules(
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    modules = db.query(SystemModuleConfig).order_by(SystemModuleConfig.id.asc()).all()
+    modules = (
+        db.query(SystemModuleConfig)
+        .filter(SystemModuleConfig.tenant_id == tenant_id)
+        .order_by(SystemModuleConfig.id.asc())
+        .all()
+    )
+    if not modules:
+        provision_tenant_defaults(tenant_id, db)
+        db.commit()
+        modules = (
+            db.query(SystemModuleConfig)
+            .filter(SystemModuleConfig.tenant_id == tenant_id)
+            .order_by(SystemModuleConfig.id.asc())
+            .all()
+        )
     return [serialize_module(m) for m in modules]
 
 
@@ -39,10 +56,18 @@ def update_module_subscription(
     payload: ModuleConfigUpdate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    mod = db.query(SystemModuleConfig).filter(SystemModuleConfig.module_key == module_key).first()
+    mod = (
+        db.query(SystemModuleConfig)
+        .filter(
+            SystemModuleConfig.tenant_id == tenant_id,
+            SystemModuleConfig.module_key == module_key,
+        )
+        .first()
+    )
     if not mod:
-        raise HTTPException(status_code=404, detail="Module not found")
+        raise HTTPException(status_code=404, detail="Module not found for this tenant")
 
     mod.is_enabled = payload.is_enabled
     if payload.enable_ocr is not None:

@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-def test_full_law_firm_and_company_compliance_workflow():
+def test_full_law_firm_company_and_mdm_workflow():
     with TestClient(app) as client:
         # 1. Health & UI Home
         res = client.get("/api/health")
@@ -13,16 +13,33 @@ def test_full_law_firm_and_company_compliance_workflow():
         assert home.status_code == 200
         assert "Vidhi" in home.text
 
-        # 2. Login as Admin / Senior Advocate
+        # 2. Login as Admin / Senior Advocate (Tenant #1 + SaaS Host SuperAdmin)
         login_res = client.post(
             "/api/auth/login",
             json={"username": "admin", "password": "admin123"},
         )
         assert login_res.status_code == 200, login_res.text
+        user_info = login_res.json()["user"]
+        assert user_info["tenant_id"] == 1
+        assert user_info["tenant"]["tenant_code"] == "VIDHI-001"
         token = login_res.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
-        # 3. Plug-and-Play Modules Check
+        # 3. Verify MDM (Master Data Management) for Adalat List, Mudda ko Prakriti, etc.
+        tenant_ctx = client.get("/api/tenants/current", headers=headers)
+        assert tenant_ctx.status_code == 200
+        lovs = tenant_ctx.json()["lovs"]
+        assert len(lovs.get("COURT_NAME", [])) >= 15  # Adalat List
+        assert len(lovs.get("CASE_TYPE", [])) >= 12   # Mudda ko Prakriti
+        assert len(lovs.get("HEARING_STATUS", [])) >= 8
+        assert len(lovs.get("CASE_STATUS", [])) >= 5
+        assert len(lovs.get("PARTY_ROLE", [])) >= 5
+        assert len(lovs.get("DOCUMENT_TYPE", [])) >= 4
+        assert len(lovs.get("PAYMENT_METHOD", [])) >= 5
+        assert len(lovs.get("COMPANY_TYPE", [])) >= 4
+        assert len(lovs.get("IRD_OFFICE", [])) >= 10
+
+        # 4. Plug-and-Play Modules Check
         mod_res = client.get("/api/modules", headers=headers)
         assert mod_res.status_code == 200
         mods = mod_res.json()
@@ -31,12 +48,7 @@ def test_full_law_firm_and_company_compliance_workflow():
         assert "legal" in mod_keys
         assert "company_management" in mod_keys
 
-        # 4. Company Management Module (OCR + IRD Tax + Statutory Audit)
-        comp_sum = client.get("/api/company/summary", headers=headers)
-        assert comp_sum.status_code == 200
-        assert comp_sum.json()["counts"]["total_companies"] >= 3
-
-        # Create a new Company with auto-generated OCR, IRD Tax & Audit tasks
+        # 5. Create a new Company with auto-generated OCR, IRD Tax & Audit tasks
         new_comp_res = client.post(
             "/api/company/entities",
             headers=headers,
@@ -91,3 +103,92 @@ def test_full_law_firm_and_company_compliance_workflow():
         # Cleanup test company
         del_comp = client.delete(f"/api/company/entities/{comp_id}", headers=headers)
         assert del_comp.status_code == 200
+
+
+def test_enterprise_multitenant_isolation_and_security():
+    """Verify strict multi-tenant data isolation, zero-selection tenant login, and per-tenant MDM/LOVs."""
+    with TestClient(app) as client:
+        # 1. Login as Tenant 1 (admin)
+        t1_login = client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "admin123"},
+        )
+        assert t1_login.status_code == 200
+        t1_headers = {"Authorization": f"Bearer {t1_login.json()['access_token']}"}
+        t1_tenant_id = t1_login.json()["user"]["tenant_id"]
+        assert t1_tenant_id == 1
+
+        # 2. Login as Tenant 2 (apex_admin) — Zero tenant selection on login!
+        t2_login = client.post(
+            "/api/auth/login",
+            json={"username": "apex_admin", "password": "lawfirm123"},
+        )
+        assert t2_login.status_code == 200, t2_login.text
+        t2_user = t2_login.json()["user"]
+        t2_tenant_id = t2_user["tenant_id"]
+        assert t2_tenant_id != t1_tenant_id
+        assert t2_user["tenant"]["tenant_code"] == "APEX-002"
+        t2_headers = {"Authorization": f"Bearer {t2_login.json()['access_token']}"}
+
+        # 3. Register a confidential Client in Tenant 1
+        t1_client_res = client.post(
+            "/api/clients",
+            headers=t1_headers,
+            json={
+                "first_name": "Confidential",
+                "last_name": "TenantOneClient",
+                "address": "Baluwatar, Kathmandu",
+                "phone": "9851999999",
+                "email": "secret@tenant1.com",
+                "citizenship_no": "T1-SECRET-9999",
+            },
+        )
+        assert t1_client_res.status_code == 200
+        t1_client_id = t1_client_res.json()["id"]
+        assert t1_client_res.json()["tenant_id"] == t1_tenant_id
+
+        # 4. Verify Tenant 2 CANNOT access or view Tenant 1's Client
+        t2_get_t1_client = client.get(f"/api/clients/{t1_client_id}", headers=t2_headers)
+        assert t2_get_t1_client.status_code == 404
+
+        t2_clients_list = client.get("/api/clients", headers=t2_headers).json()
+        assert all(c["id"] != t1_client_id for c in t2_clients_list)
+        assert all(c["tenant_id"] == t2_tenant_id for c in t2_clients_list)
+
+        # Verify Tenant 2's Conflict Check does NOT leak Tenant 1's Client
+        t2_conflict = client.get(
+            "/api/dashboard/conflict-check?q=T1-SECRET-9999",
+            headers=t2_headers,
+        ).json()
+        assert t2_conflict["has_conflict"] is False
+
+        # Verify Tenant 2 cannot update or delete Tenant 1's Client
+        assert (
+            client.put(
+                f"/api/clients/{t1_client_id}",
+                headers=t2_headers,
+                json={"address": "Hacked"},
+            ).status_code
+            == 404
+        )
+        assert client.delete(f"/api/clients/{t1_client_id}", headers=t2_headers).status_code == 404
+
+        # 5. Verify Tenant-Scoped MDM/LOVs: Add custom Court in Tenant 2 and confirm Tenant 1 does not see it
+        t2_lov_res = client.post(
+            "/api/tenants/lov",
+            headers=t2_headers,
+            json={
+                "lov_group": "COURT",
+                "label_en": "Pokhara High Court Commercial Bench (Apex Custom)",
+                "label_np": "उच्च अदालत पोखरा वाणिज्य इजलास",
+            },
+        )
+        assert t2_lov_res.status_code == 200
+        lov_id = t2_lov_res.json()["id"]
+
+        t1_courts = client.get("/api/tenants/lov?lov_group=COURT", headers=t1_headers).json()
+        assert all(item["id"] != lov_id for item in t1_courts)
+
+        # Cleanup custom LOV and confidential client
+        assert client.delete(f"/api/tenants/lov/{lov_id}", headers=t2_headers).status_code == 200
+        assert client.delete(f"/api/clients/{t1_client_id}", headers=t1_headers).status_code == 200

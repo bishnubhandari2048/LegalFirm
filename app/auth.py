@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
-from app.models import StaffMember
+from app.models import StaffMember, Tenant
 
 
 def hash_password(password: str) -> str:
@@ -61,16 +61,36 @@ def get_current_user(
     user = db.query(StaffMember).filter(StaffMember.username == username, StaffMember.is_active == True).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+
+    # Verify Tenant Status (unless SuperAdmin)
+    if not user.is_superadmin:
+        tenant = db.query(Tenant).filter(Tenant.id == user.tenant_id).first()
+        if tenant and (not tenant.is_active or tenant.subscription_status == "Suspended"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="तपाईंको फर्मको सदस्यता स्थगित छ (Your tenant subscription is suspended)",
+            )
     return user
 
 
-def require_roles(*allowed_roles: str):
-    def role_checker(current_user: StaffMember = Depends(get_current_user)) -> StaffMember:
-        if current_user.role not in allowed_roles and "admin" not in [current_user.role]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"यो कार्यको लागि अनुमति छैन (Required role: {', '.join(allowed_roles)})",
-            )
-        return current_user
+def get_current_tenant_id(
+    request: Request,
+    current_user: StaffMember = Depends(get_current_user),
+) -> int:
+    """Resolve active tenant_id strictly from authenticated user (no tenant picker needed on login).
+    Only SaaS SuperAdmin may optionally inspect another tenant via X-Tenant-ID header.
+    """
+    if current_user.is_superadmin:
+        override_tid = request.headers.get("X-Tenant-ID")
+        if override_tid and override_tid.isdigit():
+            return int(override_tid)
+    return current_user.tenant_id or 1
 
-    return role_checker
+
+def require_superadmin(current_user: StaffMember = Depends(get_current_user)) -> StaffMember:
+    if not current_user.is_superadmin and current_user.role != "superadmin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="SaaS Host SuperAdmin permission required",
+        )
+    return current_user

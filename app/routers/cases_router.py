@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import LegalCase, Client, StaffMember, PaymentRecord, Hearing, CaseDocument
+from app.models import LegalCase, Client, StaffMember, PaymentRecord, Hearing, CaseDocument, Tenant
 from app.schemas import LegalCaseCreate, LegalCaseUpdate
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_tenant_id
 from app.bs_calendar import bs_to_ad, ad_to_bs, format_bs_human
 
 router = APIRouter(prefix="/api/cases", tags=["Cases / मुद्दाको विवरण"])
@@ -21,6 +21,7 @@ def recalculate_case_financials(legal_case: LegalCase, db: Session):
 def serialize_case(c: LegalCase, include_details: bool = False) -> dict:
     data = {
         "id": c.id,
+        "tenant_id": c.tenant_id,
         "case_number": c.case_number,
         "filing_number": c.filing_number or "",
         "case_title": c.case_title or f"{c.client.full_name if c.client else ''} वि. {c.opponent_name}",
@@ -119,8 +120,9 @@ def list_cases(
     client_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    query = db.query(LegalCase).outerjoin(Client)
+    query = db.query(LegalCase).filter(LegalCase.tenant_id == tenant_id).outerjoin(Client)
     if search:
         term = f"%{search.strip()}%"
         query = query.filter(
@@ -156,8 +158,13 @@ def get_case(
     case_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    c = db.query(LegalCase).filter(LegalCase.id == case_id).first()
+    c = (
+        db.query(LegalCase)
+        .filter(LegalCase.id == case_id, LegalCase.tenant_id == tenant_id)
+        .first()
+    )
     if not c:
         raise HTTPException(status_code=404, detail="मुद्दाको विवरण भेटिएन (Case not found)")
     return serialize_case(c, include_details=True)
@@ -168,12 +175,24 @@ def create_case(
     payload: LegalCaseCreate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    existing = db.query(LegalCase).filter(LegalCase.case_number == payload.case_number.strip()).first()
+    existing = (
+        db.query(LegalCase)
+        .filter(
+            LegalCase.tenant_id == tenant_id,
+            LegalCase.case_number == payload.case_number.strip(),
+        )
+        .first()
+    )
     if existing:
         raise HTTPException(status_code=400, detail="यो मुद्दा नम्बर पहिले नै दर्ता भइसकेको छ")
 
-    client = db.query(Client).filter(Client.id == payload.client_id).first()
+    client = (
+        db.query(Client)
+        .filter(Client.id == payload.client_id, Client.tenant_id == tenant_id)
+        .first()
+    )
     if not client:
         raise HTTPException(status_code=404, detail="चयन गरिएको क्लाइन्ट भेटिएन")
 
@@ -186,6 +205,7 @@ def create_case(
     due_amt = max(0.0, deal_amt - init_paid)
 
     new_case = LegalCase(
+        tenant_id=tenant_id,
         case_number=payload.case_number.strip(),
         filing_number=payload.filing_number,
         case_title=case_title,
@@ -215,12 +235,15 @@ def create_case(
     db.flush()
 
     if init_paid > 0:
+        tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+        prefix = (tenant.receipt_prefix if tenant and tenant.receipt_prefix else "RCP").strip()
         receipt_no = (
             payload.initial_receipt_number.strip()
             if payload.initial_receipt_number
-            else f"RCP-{new_case.id:03d}-{int(datetime.utcnow().timestamp()) % 10000:04d}"
+            else f"{prefix}-{new_case.id:03d}-{int(datetime.utcnow().timestamp()) % 10000:04d}"
         )
         payment = PaymentRecord(
+            tenant_id=tenant_id,
             case_id=new_case.id,
             client_id=client.id,
             amount=init_paid,
@@ -245,8 +268,13 @@ def update_case(
     payload: LegalCaseUpdate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    c = db.query(LegalCase).filter(LegalCase.id == case_id).first()
+    c = (
+        db.query(LegalCase)
+        .filter(LegalCase.id == case_id, LegalCase.tenant_id == tenant_id)
+        .first()
+    )
     if not c:
         raise HTTPException(status_code=404, detail="मुद्दाको विवरण भेटिएन")
 
@@ -270,8 +298,13 @@ def delete_case(
     case_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    c = db.query(LegalCase).filter(LegalCase.id == case_id).first()
+    c = (
+        db.query(LegalCase)
+        .filter(LegalCase.id == case_id, LegalCase.tenant_id == tenant_id)
+        .first()
+    )
     if not c:
         raise HTTPException(status_code=404, detail="मुद्दाको विवरण भेटिएन")
     db.delete(c)

@@ -4,7 +4,77 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 # ============================================================
-# 0. Plug-and-Play Module Subscription Schemas
+# 0A. Enterprise Multi-Tenant SaaS & Tenant-Scoped LOV Schemas
+# ============================================================
+
+class TenantCreate(BaseModel):
+    tenant_code: str = Field(..., description="Unique tenant code e.g. FIRM-002")
+    firm_name_en: str = Field(..., description="Law / Audit Firm Name in English")
+    firm_name_np: Optional[str] = Field(default=None, description="Law / Audit Firm Name in Nepali")
+    firm_subtitle: Optional[str] = "Advocates, Corporate Consultants & Tax Advisors"
+    pan_vat_no: Optional[str] = None
+    address: Optional[str] = "Kathmandu, Nepal"
+    phone: str
+    email: Optional[str] = None
+    receipt_prefix: str = "RCP"
+    subscription_plan: str = "Enterprise"
+    subscription_status: str = "Active"
+    subscription_expiry_bs: Optional[str] = "2084-12-30"
+    max_users: int = 25
+    enable_legal_module: bool = True
+    enable_company_module: bool = True
+    enable_ocr_sub: bool = True
+    enable_ird_sub: bool = True
+    enable_audit_sub: bool = True
+
+    # Initial Tenant Admin Account Credentials (auto-provisioned)
+    admin_full_name: str
+    admin_username: str
+    admin_password: str = "lawfirm123"
+    admin_phone: Optional[str] = None
+
+
+class TenantUpdate(BaseModel):
+    firm_name_en: Optional[str] = None
+    firm_name_np: Optional[str] = None
+    firm_subtitle: Optional[str] = None
+    pan_vat_no: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    receipt_prefix: Optional[str] = None
+    subscription_plan: Optional[str] = None
+    subscription_status: Optional[str] = None
+    subscription_expiry_bs: Optional[str] = None
+    max_users: Optional[int] = None
+    enable_legal_module: Optional[bool] = None
+    enable_company_module: Optional[bool] = None
+    enable_ocr_sub: Optional[bool] = None
+    enable_ird_sub: Optional[bool] = None
+    enable_audit_sub: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+
+class TenantLOVCreate(BaseModel):
+    category: Optional[str] = Field(default=None, description="COURT_NAME | CASE_TYPE | HEARING_STATUS | CASE_STATUS | PARTY_ROLE | PAYMENT_METHOD | DOCUMENT_TYPE | IRD_OFFICE | COMPANY_TYPE")
+    lov_group: Optional[str] = None
+    value_en: Optional[str] = None
+    value_np: Optional[str] = None
+    label_en: Optional[str] = None
+    label_np: Optional[str] = None
+    sort_order: int = 10
+    is_active: bool = True
+
+
+class TenantLOVUpdate(BaseModel):
+    value_en: Optional[str] = None
+    value_np: Optional[str] = None
+    sort_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+# ============================================================
+# 0B. Plug-and-Play Module Subscription Schemas
 # ============================================================
 
 class ModuleConfigUpdate(BaseModel):
@@ -60,6 +130,7 @@ class StaffMemberUpdate(BaseModel):
 
 class StaffMemberOut(StaffMemberBase):
     id: int
+    tenant_id: int
     created_at: Optional[datetime] = None
     active_cases_count: int = 0
 
@@ -71,14 +142,14 @@ class StaffMemberOut(StaffMemberBase):
 # ============================================================
 
 class ClientBase(BaseModel):
-    first_name: str = Field(..., description="नाम")
-    last_name: str = Field(..., description="थर")
-    address: str = Field(..., description="ठेगाना")
+    first_name: str
+    last_name: str
+    address: str
     district: Optional[str] = None
-    phone: str = Field(..., description="सम्पर्क नम्बर")
+    phone: str
     alt_phone: Optional[str] = None
     email: Optional[str] = None
-    citizenship_no: str = Field(..., description="नागरिकता नम्बर")
+    citizenship_no: str
     citizenship_district: Optional[str] = None
     citizenship_issue_date_bs: Optional[str] = None
     father_or_spouse_name: Optional[str] = None
@@ -106,36 +177,24 @@ class ClientUpdate(BaseModel):
     notes: Optional[str] = None
 
 
-class ClientOut(ClientBase):
-    id: int
-    full_name: str
-    created_at: Optional[datetime] = None
-    case_count: int = 0
-    total_deal: float = 0.0
-    total_paid: float = 0.0
-    total_due: float = 0.0
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 # ============================================================
 # 3. मुद्दाको विवरण (Legal Case Schemas)
 # ============================================================
 
 class LegalCaseBase(BaseModel):
-    case_number: str = Field(..., description="मुद्दा नम्बर (Case No.)")
+    case_number: str
     filing_number: Optional[str] = None
     case_title: Optional[str] = None
-    court_name: str = Field(..., description="अदालतको नाम")
+    court_name: str
     bench_section: Optional[str] = None
-    case_type: str = Field(..., description="मुद्दाको प्रकार")
+    case_type: str
     client_id: int
     client_party_role: str = "वादी (Plaintiff)"
-    opponent_name: str = Field(..., description="विपक्षीको नाम")
+    opponent_name: str
     opponent_address: Optional[str] = None
     opponent_contact: Optional[str] = None
     opponent_counsel: Optional[str] = None
-    registration_date_bs: str = Field(..., description="मुद्दा दर्ता मिति (वि.सं.)")
+    registration_date_bs: str
     registration_date_ad: Optional[date] = None
     status: str = "विचाराधीन (Active)"
     deal_amount: float = 0.0
@@ -184,9 +243,9 @@ class LegalCaseUpdate(BaseModel):
 
 class HearingBase(BaseModel):
     case_id: int
-    hearing_date_bs: str = Field(..., description="पेशी मिति (वि.सं.)")
+    hearing_date_bs: str
     hearing_date_ad: Optional[date] = None
-    hearing_status: str = Field(..., description="पेशीको अवस्था")
+    hearing_status: str
     bench_or_judge: Optional[str] = None
     next_hearing_date_bs: Optional[str] = None
     next_hearing_date_ad: Optional[date] = None
@@ -218,8 +277,8 @@ class HearingUpdate(BaseModel):
 class PaymentBase(BaseModel):
     case_id: int
     client_id: Optional[int] = None
-    amount: float = Field(..., gt=0, description="प्राप्त रकम")
-    payment_date_bs: str = Field(..., description="भुक्तानी मिति (वि.सं.)")
+    amount: float = Field(..., gt=0)
+    payment_date_bs: str
     payment_date_ad: Optional[date] = None
     payment_method: str = Field(default="नगद (Cash)")
     receipt_number: Optional[str] = Field(default=None)
@@ -343,7 +402,7 @@ class CorporateEntityUpdate(BaseModel):
 
 class ComplianceActivityBase(BaseModel):
     company_id: int
-    category: str = "OCR"  # OCR | IRD_TAX | AUDIT
+    category: str = "OCR"
     activity_type: str
     fiscal_year: str = "2082/83"
     period_label: Optional[str] = None

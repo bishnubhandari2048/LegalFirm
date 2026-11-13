@@ -4,15 +4,20 @@
 // ============================================================================
 
 let currentUser = null;
+let currentTenant = null;
+let inspectedTenantId = null; // Optional override for SaaS SuperAdmin
 let currentLang = localStorage.getItem("vidhi_lang") || "en";
 let activeTab = "dashboard";
 let selectedComplianceCategory = "";
+let selectedLovGroup = "COURT";
 
 let cachedClients = [];
 let cachedCases = [];
 let cachedStaff = [];
 let cachedCompanies = [];
 let cachedModules = [];
+let cachedLovsByGroup = {};
+let cachedAllLovs = [];
 let currentBsDate = "2083-07-21";
 
 // ============================================================================
@@ -44,6 +49,8 @@ const I18N = {
     nav_staff: "Advocates, Auditors & Staff",
     nav_tools: "Conflict & BS/AD Converter",
     nav_modules: "Plug & Play Modules",
+    nav_firm_settings: "Firm Settings & LOVs",
+    nav_tenants: "SaaS Client Tenants (Host)",
     btn_logout: "Logout",
     btn_new_client: "+ Client",
     btn_new_case: "+ Case",
@@ -108,6 +115,8 @@ const I18N = {
     nav_staff: "वकिल, लेखापरीक्षक र कर्मचारी",
     nav_tools: "द्वन्द्व जाँच र मिति रूपान्तरण",
     nav_modules: "प्लग-एण्ड-प्ले मोड्युल (Modules)",
+    nav_firm_settings: "फर्म सेटिङ र सूची (LOVs)",
+    nav_tenants: "क्लाइन्ट फर्म टेनेन्टहरू (SaaS Host)",
     btn_logout: "लगआउट",
     btn_new_client: "+ नयाँ क्लाइन्ट",
     btn_new_case: "+ नयाँ मुद्दा",
@@ -162,6 +171,8 @@ const TAB_TITLES = {
     staff: ["👨‍⚖️ Advocates, Auditors & Support Staff", "Nepal Bar Council License, ICAN COP No., Specialization & Contact Details"],
     tools: ["🔍 Conflict of Interest Check & BS/AD Date Converter", "Search across all Clients/Opponents and convert Bikram Sambat ↔ Gregorian dates"],
     modules: ["🔌 Plug & Play Module Subscription Manager", "Configure subscribed modules (Legal Litigation, OCR, IRD Tax & Statutory Audit)"],
+    "firm-settings": ["⚙️ Tenant Firm Settings & List of Values (LOV)", "Manage your firm branding, receipt prefix, and custom dropdown lists (Courts, Case Types, Payment Methods, IRD Offices)"],
+    tenants: ["🌐 SaaS Multi-Tenant Client Firms (Host SuperAdmin)", "Onboard new Law, Corporate & Audit Firm Clients with isolated credentials, LOVs & module subscriptions"],
   },
   ne: {
     dashboard: ["📊 समग्र ड्यासबोर्ड र म्याद अनुस्मारक (Dashboard)", "अदालती पेशी, कम्पनी रजिष्ट्रार (OCR), आन्तरिक राजस्व कर र लेखापरीक्षणको एकीकृत विवरण"],
@@ -175,6 +186,8 @@ const TAB_TITLES = {
     staff: ["👨‍⚖️ वकिल, लेखापरीक्षक तथा कर्मचारी विवरण", "नेपाल बार काउन्सिल नं., ICAN दर्ता नं., विशेषज्ञता र सम्पर्क विवरण"],
     tools: ["🔍 विपक्षी द्वन्द्व जाँच र वि.सं. ↔ ई.सं. मिति रूपान्तरण", "क्लाइन्ट/विपक्षी द्वन्द्व जाँच र विक्रम संवत् रूपान्तरण"],
     modules: ["🔌 प्लग-एण्ड-प्ले मोड्युल व्यवस्थापन (Module Subscriptions)", "फर्मको आवश्यकता अनुसार कानूनी मुद्दा, OCR, कर र लेखापरीक्षण मोड्युल सुचारु वा बन्द गर्नुहोस्"],
+    "firm-settings": ["⚙️ फर्म सेटिङ र सूची व्यवस्थापन (Tenant Settings & LOVs)", "तपाईंको फर्मको नाम, रसिद कोड र ड्रपडाउन सूचीहरू (अदालत, मुद्दा प्रकार, भुक्तानी माध्यम) व्यवस्थापन गर्नुहोस्"],
+    tenants: ["🌐 बहु-टेनेन्ट क्लाइन्ट फर्म व्यवस्थापन (SaaS Host Control)", "नयाँ ल फर्म, कर्पोरेट वा अडिट फर्मलाई क्लाइन्ट टेनेन्टको रूपमा दर्ता र व्यवस्थापन गर्नुहोस्"],
   },
 };
 
@@ -220,6 +233,7 @@ function setLanguage(lang) {
     document.getElementById("page-title").textContent = titles[0];
     document.getElementById("page-subtitle").textContent = titles[1];
   }
+  updateSidebarTenantBranding();
 
   // Re-render current active tab if logged in
   if (currentUser) {
@@ -227,7 +241,7 @@ function setLanguage(lang) {
   }
 }
 
-const COURT_SUGGESTIONS = [
+let COURT_SUGGESTIONS = [
   "सर्वोच्च अदालत (Supreme Court of Nepal)",
   "उच्च अदालत पाटन (High Court Patan)",
   "काठमाडौँ जिल्ला अदालत (Kathmandu District Court)",
@@ -238,7 +252,7 @@ const COURT_SUGGESTIONS = [
   "राजस्व न्यायाधिकरण (Revenue Tribunal)"
 ];
 
-const CASE_TYPES = [
+let CASE_TYPES = [
   "अंशबण्डा (Partition of Property)",
   "लेनदेन (Loan / Recovery)",
   "सम्बन्ध विच्छेद र अंश (Divorce & Alimony)",
@@ -251,7 +265,7 @@ const CASE_TYPES = [
   "कर्पोरेट तथा करार (Corporate & Contract)"
 ];
 
-const HEARING_STATUS_OPTIONS = [
+let HEARING_STATUS_OPTIONS = [
   "तारेख (Tarekh)",
   "साधारण तारेख (General Tarekh)",
   "बहस / पेशी तोकिएको (Scheduled for Arguments)",
@@ -264,7 +278,7 @@ const HEARING_STATUS_OPTIONS = [
   "फैसला (Final Verdict)"
 ];
 
-const PAYMENT_METHODS = [
+let PAYMENT_METHODS = [
   "नगद (Cash)",
   "बैंक ट्रान्सफर (Bank Transfer)",
   "चेक (Cheque)",
@@ -326,6 +340,9 @@ async function apiFetch(url, options = {}) {
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
+  if (inspectedTenantId) {
+    headers["X-Tenant-ID"] = String(inspectedTenantId);
+  }
   if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
@@ -367,6 +384,7 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Login failed");
     localStorage.setItem("vidhi_token", data.access_token);
+    inspectedTenantId = null;
     currentUser = data.user;
     enterApp();
   } catch (err) {
@@ -393,8 +411,26 @@ async function handleLogout() {
   } catch (_) {}
   localStorage.removeItem("vidhi_token");
   currentUser = null;
+  currentTenant = null;
+  inspectedTenantId = null;
   document.getElementById("app-shell").classList.add("hidden");
   document.getElementById("login-screen").classList.remove("hidden");
+}
+
+function updateSidebarTenantBranding() {
+  const tenant = currentTenant || currentUser?.tenant;
+  if (!tenant) return;
+  const codeEl = document.getElementById("sidebar-tenant-code");
+  const planEl = document.getElementById("sidebar-tenant-plan");
+  const firmEl = document.getElementById("sidebar-firm-name");
+  if (codeEl) codeEl.textContent = tenant.tenant_code || `T-${tenant.id}`;
+  if (planEl) planEl.textContent = tenant.subscription_plan || "Enterprise";
+  if (firmEl) {
+    firmEl.textContent =
+      currentLang === "ne"
+        ? tenant.firm_name_np || tenant.firm_name_en
+        : tenant.firm_name_en || tenant.firm_name_np;
+  }
 }
 
 async function enterApp() {
@@ -403,26 +439,65 @@ async function enterApp() {
   if (currentUser) {
     document.getElementById("user-display-name").textContent = currentUser.full_name;
     document.getElementById("user-display-role").textContent = `${currentUser.designation} (${currentUser.role})`;
+    const navTenants = document.getElementById("nav-tenants");
+    if (navTenants) {
+      navTenants.classList.toggle("hidden", !currentUser.is_superadmin);
+    }
   }
   await refreshReferenceLists();
+  updateSidebarTenantBranding();
   applyModuleVisibility();
   await switchTab("dashboard");
 }
 
+function applyTenantLovs(lovsByGroup) {
+  cachedLovsByGroup = lovsByGroup || {};
+  const fmtLov = (item) =>
+    item.label_np && item.label_en && !item.label_np.includes(item.label_en)
+      ? `${item.label_np} (${item.label_en})`
+      : item.label_np || item.label_en;
+
+  if (cachedLovsByGroup.COURT?.length) {
+    COURT_SUGGESTIONS = cachedLovsByGroup.COURT.map(fmtLov);
+  }
+  if (cachedLovsByGroup.CASE_TYPE?.length) {
+    CASE_TYPES = cachedLovsByGroup.CASE_TYPE.map(fmtLov);
+    const filterEl = document.getElementById("case-type-filter");
+    if (filterEl) {
+      const curVal = filterEl.value;
+      filterEl.innerHTML =
+        `<option value="">All Case Types / सबै प्रकार (MDM)</option>` +
+        CASE_TYPES.map((ct) => `<option value="${ct}">${ct}</option>`).join("");
+      filterEl.value = curVal;
+    }
+  }
+  if (cachedLovsByGroup.HEARING_STATUS?.length) {
+    HEARING_STATUS_OPTIONS = cachedLovsByGroup.HEARING_STATUS.map(fmtLov);
+  }
+  if (cachedLovsByGroup.PAYMENT_METHOD?.length) {
+    PAYMENT_METHODS = cachedLovsByGroup.PAYMENT_METHOD.map((x) => x.label_np || x.label_en);
+  }
+}
+
 async function refreshReferenceLists() {
   try {
-    const [clients, cases, staff, companies, modules] = await Promise.all([
+    const [clients, cases, staff, companies, modules, tenantBundle] = await Promise.all([
       apiFetch("/api/clients"),
       apiFetch("/api/cases"),
       apiFetch("/api/staff"),
       apiFetch("/api/company/entities"),
       apiFetch("/api/modules"),
+      apiFetch("/api/tenants/current"),
     ]);
     cachedClients = clients;
     cachedCases = cases;
     cachedStaff = staff;
     cachedCompanies = companies;
     cachedModules = modules;
+    if (tenantBundle && tenantBundle.tenant) {
+      currentTenant = tenantBundle.tenant;
+      applyTenantLovs(tenantBundle.lovs_by_group);
+    }
   } catch (e) {
     console.warn("Could not preload reference lists:", e);
   }
@@ -484,6 +559,8 @@ async function switchTab(tabName) {
   if (tabName === "compliance") await loadComplianceActivities();
   if (tabName === "staff") await loadStaff();
   if (tabName === "modules") await loadModulesView();
+  if (tabName === "firm-settings") await loadFirmSettingsView();
+  if (tabName === "tenants") await loadTenantsView();
 }
 
 // ============================================================================
@@ -1993,6 +2070,323 @@ function openModal(title, htmlContent) {
 function closeModal() {
   document.getElementById("modal-container").classList.add("hidden");
   document.getElementById("modal-body").innerHTML = "";
+}
+
+// ============================================================================
+// 12. TENANT FIRM SETTINGS & LIST OF VALUES (LOV)
+// ============================================================================
+async function loadFirmSettingsView() {
+  const bundle = await apiFetch("/api/tenants/current");
+  currentTenant = bundle.tenant;
+  applyTenantLovs(bundle.lovs_by_group);
+  updateSidebarTenantBranding();
+
+  document.getElementById("settings-tenant-badge").textContent = currentTenant.tenant_code;
+  document.getElementById("tp-name-en").value = currentTenant.firm_name_en || "";
+  document.getElementById("tp-name-np").value = currentTenant.firm_name_np || "";
+  document.getElementById("tp-pan").value = currentTenant.pan_vat_no || "";
+  document.getElementById("tp-prefix").value = currentTenant.receipt_prefix || "RCP";
+  document.getElementById("tp-phone").value = currentTenant.phone || "";
+  document.getElementById("tp-email").value = currentTenant.email || "";
+  document.getElementById("tp-address").value = currentTenant.address || "";
+
+  document.getElementById("tenant-profile-form").onsubmit = async (e) => {
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(e.target).entries());
+    try {
+      const updated = await apiFetch("/api/tenants/current", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      currentTenant = updated;
+      updateSidebarTenantBranding();
+      showToast("Firm branding & receipt prefix saved!");
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  };
+
+  await filterLovGroup(selectedLovGroup || "COURT");
+}
+
+async function filterLovGroup(groupKey) {
+  selectedLovGroup = groupKey;
+  document.querySelectorAll(".lov-group-btn").forEach((btn) => {
+    btn.className = "lov-group-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700";
+  });
+  const activeBtn = document.getElementById(`lov-tab-${groupKey}`);
+  if (activeBtn) {
+    activeBtn.className = "lov-group-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white shadow";
+  }
+
+  const items = await apiFetch(`/api/tenants/lov?lov_group=${encodeURIComponent(groupKey)}`);
+  cachedAllLovs = items;
+  const tbody = document.getElementById("lov-table-body");
+  if (!items.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No LOV items in ${groupKey}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = items
+    .map(
+      (x) => `
+    <tr class="hover:bg-slate-50">
+      <td class="py-2.5 px-3 font-mono text-xs font-bold text-slate-500">${x.lov_group}</td>
+      <td class="py-2.5 px-3 font-semibold text-slate-900">${x.label_en}</td>
+      <td class="py-2.5 px-3 text-slate-700">${x.label_np || x.label_en}</td>
+      <td class="py-2.5 px-3 text-right">
+        <button onclick="deleteLovItem(${x.id})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded text-xs font-bold">Delete</button>
+      </td>
+    </tr>`
+    )
+    .join("");
+}
+
+function openAddLovModal() {
+  openModal(
+    `📋 Add Master Data (MDM) Item — ${selectedLovGroup}`,
+    `
+    <form id="lov-add-form" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">MDM Category / Group *</label>
+        <select name="lov_group" class="w-full px-3 py-2 border rounded-lg bg-white">
+          <option value="COURT" ${selectedLovGroup === "COURT" ? "selected" : ""}>COURT — अदालतको सूची (Adalat List)</option>
+          <option value="CASE_TYPE" ${selectedLovGroup === "CASE_TYPE" ? "selected" : ""}>CASE_TYPE — मुद्दाको प्रकृति (Mudda ko Prakriti)</option>
+          <option value="HEARING_STATUS" ${selectedLovGroup === "HEARING_STATUS" ? "selected" : ""}>HEARING_STATUS — पेशीको अवस्था (Peshi Status)</option>
+          <option value="CASE_STATUS" ${selectedLovGroup === "CASE_STATUS" ? "selected" : ""}>CASE_STATUS — मुद्दाको अवस्था (Case Status)</option>
+          <option value="PARTY_ROLE" ${selectedLovGroup === "PARTY_ROLE" ? "selected" : ""}>PARTY_ROLE — पक्षको हैसियत (Party Role)</option>
+          <option value="DOCUMENT_TYPE" ${selectedLovGroup === "DOCUMENT_TYPE" ? "selected" : ""}>DOCUMENT_TYPE — कागजातको प्रकार (Document Type)</option>
+          <option value="PAYMENT_METHOD" ${selectedLovGroup === "PAYMENT_METHOD" ? "selected" : ""}>PAYMENT_METHOD — भुक्तानी माध्यम (Payment Method)</option>
+          <option value="COMPANY_TYPE" ${selectedLovGroup === "COMPANY_TYPE" ? "selected" : ""}>COMPANY_TYPE — कम्पनीको प्रकार (OCR Company Type)</option>
+          <option value="IRD_OFFICE" ${selectedLovGroup === "IRD_OFFICE" ? "selected" : ""}>IRD_OFFICE — आन्तरिक राजस्व कार्यालय (IRD Office)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">English Label *</label>
+        <input type="text" name="label_en" required placeholder="e.g. High Court Biratnagar" class="w-full px-3 py-2 border rounded-lg" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">Nepali Label (नेपाली नाम)</label>
+        <input type="text" name="label_np" placeholder="उच्च अदालत विराटनगर" class="w-full px-3 py-2 border rounded-lg" />
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-200 rounded-lg font-semibold">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-amber-600 text-white rounded-lg font-bold shadow">Add to MDM</button>
+      </div>
+    </form>`
+  );
+
+  document.getElementById("lov-add-form").onsubmit = async (e) => {
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(e.target).entries());
+    try {
+      await apiFetch("/api/tenants/lov", { method: "POST", body: JSON.stringify(payload) });
+      closeModal();
+      showToast("Custom MDM item added!");
+      await loadFirmSettingsView();
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  };
+}
+
+async function syncDefaultMdm() {
+  try {
+    const res = await apiFetch("/api/tenants/mdm/seed-defaults", { method: "POST" });
+    showToast(`${res.message} (${res.total_mdm_items} items)`);
+    await loadFirmSettingsView();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+async function confirmClearTransactionalData() {
+  const ok = confirm(
+    "Are you sure you want to clear all transactional data (Cases, Hearings, Payments, Documents, Companies, Clients)?\n\nYour Firm Settings, Users, and MDM Master Data (Adalat List, Mudda ko Prakriti, etc.) will be preserved."
+  );
+  if (!ok) return;
+  try {
+    const res = await apiFetch("/api/tenants/clear-transactions?scope=tenant", { method: "POST" });
+    showToast(res.message);
+    await refreshReferenceLists();
+    await switchTab("dashboard");
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+async function deleteLovItem(lovId) {
+  if (!confirm("Remove this LOV item from your firm?")) return;
+  await apiFetch(`/api/tenants/lov/${lovId}`, { method: "DELETE" });
+  await loadFirmSettingsView();
+}
+
+// ============================================================================
+// 13. SAAS MULTI-TENANT CLIENT MANAGEMENT (HOST SUPERADMIN)
+// ============================================================================
+async function loadTenantsView() {
+  try {
+    const tenants = await apiFetch("/api/tenants");
+    const tbody = document.getElementById("tenants-table-body");
+    tbody.innerHTML = tenants
+      .map((t) => {
+        const modBadges = (t.modules || [])
+          .filter((m) => m.is_enabled)
+          .map(
+            (m) =>
+              `<span class="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">${
+                m.module_key === "legal" ? "⚖️ Legal" : "🏢 Company (OCR/Tax/Audit)"
+              }</span>`
+          )
+          .join(" ");
+        const isCurrent = (inspectedTenantId || currentUser?.tenant_id) === t.id;
+        return `
+        <tr class="hover:bg-slate-50 transition ${isCurrent ? "bg-amber-50/60" : ""}">
+          <td class="py-3.5 px-4">
+            <span class="px-2.5 py-1 bg-slate-900 text-amber-400 rounded-lg font-mono text-xs font-bold">${t.tenant_code}</span>
+            <div class="text-[11px] text-slate-500 mt-1 font-semibold">${t.subscription_plan}</div>
+          </td>
+          <td class="py-3.5 px-4">
+            <div class="font-extrabold text-slate-900">${t.firm_name_en}</div>
+            <div class="text-xs text-slate-600">${t.firm_name_np || ""}</div>
+            <div class="text-[11px] text-amber-700 font-medium">${t.firm_type}</div>
+          </td>
+          <td class="py-3.5 px-4 space-x-1">${modBadges || "<span class='text-xs text-slate-400'>None</span>"}</td>
+          <td class="py-3.5 px-4 text-xs">
+            <div class="font-bold">📞 ${t.phone || "-"}</div>
+            <div class="text-slate-500">${t.address || ""}</div>
+            ${t.pan_vat_no ? `<div class="font-mono text-slate-700">PAN: ${t.pan_vat_no}</div>` : ""}
+          </td>
+          <td class="py-3.5 px-4 text-center">
+            <div class="inline-flex gap-2 px-3 py-1 bg-slate-100 rounded-xl text-xs font-bold">
+              <span title="Users">👨‍⚖️ ${t.users_count}</span>
+              <span title="Clients">👥 ${t.clients_count}</span>
+              <span title="Cases">📁 ${t.cases_count}</span>
+              <span title="Companies">🏢 ${t.companies_count}</span>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 text-center">
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
+              t.status === "Active" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+            }">${t.status}</span>
+          </td>
+          <td class="py-3.5 px-4 text-right space-x-1">
+            <button onclick="inspectTenantWorkspace(${t.id}, '${t.firm_name_en.replace(/'/g, "")}')" class="px-2.5 py-1 ${
+          isCurrent ? "bg-emerald-700 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"
+        } rounded text-xs font-bold">
+              ${isCurrent ? "✓ Active View" : "Switch Workspace"}
+            </button>
+          </td>
+        </tr>`;
+      })
+      .join("");
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+async function inspectTenantWorkspace(tenantId, firmName) {
+  inspectedTenantId = tenantId;
+  await refreshReferenceLists();
+  updateSidebarTenantBranding();
+  applyModuleVisibility();
+  showToast(`Switched workspace view to Tenant: ${firmName}`);
+  await switchTab("dashboard");
+}
+
+function openCreateTenantModal() {
+  openModal(
+    "🌐 Onboard New Client Firm (Create Isolated Multi-Tenant)",
+    `
+    <form id="create-tenant-form" class="space-y-4">
+      <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900">
+        <strong>Zero-Selection Multi-Tenancy:</strong> The admin username & password you create below will automatically route this client firm to their own isolated tenant database, LOVs, and modules upon login.
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Client Firm Name (English) *</label>
+          <input type="text" name="firm_name_en" required placeholder="e.g. Himalayan Law & Tax Associates" class="w-full px-3 py-2 border rounded-lg" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">फर्मको नाम (Nepali)</label>
+          <input type="text" name="firm_name_np" placeholder="हिमालयन ल एण्ड ट्याक्स एसोसिएट्स" class="w-full px-3 py-2 border rounded-lg" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Tenant Code (Unique) *</label>
+          <input type="text" name="tenant_code" required placeholder="HIMALAYAN-003" class="w-full px-3 py-2 border rounded-lg font-mono uppercase" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Receipt Prefix</label>
+          <input type="text" name="receipt_prefix" value="HLA-RCP" class="w-full px-3 py-2 border rounded-lg font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Firm PAN / VAT No.</label>
+          <input type="text" name="pan_vat_no" placeholder="609xxxxxx" class="w-full px-3 py-2 border rounded-lg" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Phone *</label>
+          <input type="text" name="phone" required placeholder="98510xxxxx" class="w-full px-3 py-2 border rounded-lg" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs font-bold text-slate-700 mb-1">Address</label>
+          <input type="text" name="address" placeholder="Putalisadak, Kathmandu" class="w-full px-3 py-2 border rounded-lg" />
+        </div>
+      </div>
+
+      <div class="p-3 bg-slate-50 border rounded-xl space-y-2">
+        <div class="text-xs font-extrabold text-slate-800">🔌 Subscribed Modules for this Tenant:</div>
+        <div class="flex flex-wrap gap-4 text-xs font-semibold">
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" name="enable_legal_module" checked class="w-4 h-4 accent-amber-600" />
+            <span>⚖️ Legal & Litigation Module</span>
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" name="enable_company_module" checked class="w-4 h-4 accent-emerald-600" />
+            <span>🏢 Company Management (OCR, IRD Tax & Audit)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="md:col-span-3 text-xs font-extrabold text-amber-900">🔑 Client Tenant Admin Login Credentials:</div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Admin Full Name *</label>
+          <input type="text" name="admin_full_name" required placeholder="Adv. Kiran Sharma" class="w-full px-3 py-1.5 border rounded-lg bg-white" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Login Username *</label>
+          <input type="text" name="admin_username" required placeholder="kiran_admin" class="w-full px-3 py-1.5 border rounded-lg bg-white font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Login Password *</label>
+          <input type="text" name="admin_password" required value="lawfirm123" class="w-full px-3 py-1.5 border rounded-lg bg-white font-mono" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-200 rounded-lg font-semibold">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold shadow">
+          Provision Tenant & Credentials
+        </button>
+      </div>
+    </form>`
+  );
+
+  document.getElementById("create-tenant-form").onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const payload = Object.fromEntries(fd.entries());
+    payload.enable_legal_module = fd.has("enable_legal_module");
+    payload.enable_company_module = fd.has("enable_company_module");
+
+    try {
+      await apiFetch("/api/tenants", { method: "POST", body: JSON.stringify(payload) });
+      closeModal();
+      showToast(`Tenant '${payload.firm_name_en}' provisioned with login '${payload.admin_username}'!`);
+      await loadTenantsView();
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  };
 }
 
 window.addEventListener("DOMContentLoaded", checkSessionOnLoad);

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Hearing, LegalCase, StaffMember
 from app.schemas import HearingCreate, HearingUpdate
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_tenant_id
 from app.bs_calendar import bs_to_ad, format_bs_human
 
 router = APIRouter(prefix="/api/hearings", tags=["Hearings (Peshi) / पेशी विवरण"])
@@ -14,6 +14,7 @@ def serialize_hearing(h: Hearing) -> dict:
     c = h.legal_case
     return {
         "id": h.id,
+        "tenant_id": h.tenant_id,
         "case_id": h.case_id,
         "case_number": c.case_number if c else "",
         "case_title": c.case_title if c else "",
@@ -47,8 +48,13 @@ def list_hearings(
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    query = db.query(Hearing).join(LegalCase)
+    query = (
+        db.query(Hearing)
+        .filter(Hearing.tenant_id == tenant_id)
+        .join(LegalCase)
+    )
     if case_id:
         query = query.filter(Hearing.case_id == case_id)
     if hearing_status:
@@ -76,8 +82,13 @@ def create_hearing(
     payload: HearingCreate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    legal_case = db.query(LegalCase).filter(LegalCase.id == payload.case_id).first()
+    legal_case = (
+        db.query(LegalCase)
+        .filter(LegalCase.id == payload.case_id, LegalCase.tenant_id == tenant_id)
+        .first()
+    )
     if not legal_case:
         raise HTTPException(status_code=404, detail="सम्बन्धित मुद्दा भेटिएन")
 
@@ -85,6 +96,7 @@ def create_hearing(
     next_ad = payload.next_hearing_date_ad or bs_to_ad(payload.next_hearing_date_bs)
 
     hearing = Hearing(
+        tenant_id=tenant_id,
         case_id=payload.case_id,
         hearing_date_bs=payload.hearing_date_bs.strip(),
         hearing_date_ad=h_ad,
@@ -118,8 +130,13 @@ def update_hearing(
     payload: HearingUpdate,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    hearing = db.query(Hearing).filter(Hearing.id == hearing_id).first()
+    hearing = (
+        db.query(Hearing)
+        .filter(Hearing.id == hearing_id, Hearing.tenant_id == tenant_id)
+        .first()
+    )
     if not hearing:
         raise HTTPException(status_code=404, detail="पेशी विवरण भेटिएन")
 
@@ -146,8 +163,13 @@ def delete_hearing(
     hearing_id: int,
     db: Session = Depends(get_db),
     current_user: StaffMember = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant_id),
 ):
-    hearing = db.query(Hearing).filter(Hearing.id == hearing_id).first()
+    hearing = (
+        db.query(Hearing)
+        .filter(Hearing.id == hearing_id, Hearing.tenant_id == tenant_id)
+        .first()
+    )
     if not hearing:
         raise HTTPException(status_code=404, detail="पेशी विवरण भेटिएन")
     db.delete(hearing)
