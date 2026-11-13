@@ -195,6 +195,11 @@ function t(key) {
   return (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
 }
 
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val ?? "";
+}
+
 function setLanguage(lang) {
   currentLang = lang === "ne" ? "ne" : "en";
   localStorage.setItem("vidhi_lang", currentLang);
@@ -230,8 +235,8 @@ function setLanguage(lang) {
   // Update current page header
   const titles = TAB_TITLES[currentLang][activeTab] || TAB_TITLES.en[activeTab];
   if (titles) {
-    document.getElementById("page-title").textContent = titles[0];
-    document.getElementById("page-subtitle").textContent = titles[1];
+    setText("page-title", titles[0]);
+    setText("page-subtitle", titles[1]);
   }
   updateSidebarTenantBranding();
 
@@ -326,6 +331,7 @@ function fmtNPR(num) {
 
 function showToast(msg, isError = false) {
   const el = document.getElementById("toast");
+  if (!el) return;
   el.textContent = msg;
   el.className = `fixed bottom-5 right-5 z-50 px-5 py-3 rounded-xl shadow-2xl text-white font-semibold text-sm transition ${
     isError ? "bg-rose-600" : "bg-emerald-700"
@@ -434,11 +440,11 @@ function updateSidebarTenantBranding() {
 }
 
 async function enterApp() {
-  document.getElementById("login-screen").classList.add("hidden");
-  document.getElementById("app-shell").classList.remove("hidden");
+  document.getElementById("login-screen")?.classList.add("hidden");
+  document.getElementById("app-shell")?.classList.remove("hidden");
   if (currentUser) {
-    document.getElementById("user-display-name").textContent = currentUser.full_name;
-    document.getElementById("user-display-role").textContent = `${currentUser.designation} (${currentUser.role})`;
+    setText("user-display-name", currentUser.full_name);
+    setText("user-display-role", `${currentUser.designation} (${currentUser.role})`);
     const navTenants = document.getElementById("nav-tenants");
     if (navTenants) {
       navTenants.classList.toggle("hidden", !currentUser.is_superadmin);
@@ -545,8 +551,8 @@ async function switchTab(tabName) {
 
   const titles = (TAB_TITLES[currentLang] && TAB_TITLES[currentLang][tabName]) || TAB_TITLES.en[tabName];
   if (titles) {
-    document.getElementById("page-title").textContent = titles[0];
-    document.getElementById("page-subtitle").textContent = titles[1];
+    setText("page-title", titles[0]);
+    setText("page-subtitle", titles[1]);
   }
 
   if (tabName === "dashboard") await loadDashboard();
@@ -570,25 +576,28 @@ async function loadDashboard() {
   try {
     const data = await apiFetch("/api/dashboard/stats");
     currentBsDate = data.today_bs || currentBsDate;
-    document.getElementById("sidebar-date-bs").textContent = `BS: ${data.today_bs} (${data.today_bs_human})`;
-    document.getElementById("sidebar-date-ad").textContent = `AD: ${data.today_ad}`;
+    setText("sidebar-date-bs", `BS: ${data.today_bs} (${data.today_bs_human})`);
+    setText("sidebar-date-ad", `AD: ${data.today_ad}`);
 
-    document.getElementById("kpi-clients").textContent = `${data.counts.total_clients} / ${data.counts.total_companies}`;
-    document.getElementById("kpi-companies-sub").textContent =
+    setText("kpi-clients", `${data.counts.total_clients} / ${data.counts.total_companies ?? 0}`);
+    setText(
+      "kpi-companies-sub",
       currentLang === "ne"
-        ? `क्लाइन्ट: ${data.counts.total_clients} | दर्ता कम्पनी: ${data.counts.total_companies}`
-        : `Individual Clients: ${data.counts.total_clients} | Companies: ${data.counts.total_companies}`;
+        ? `क्लाइन्ट: ${data.counts.total_clients} | दर्ता कम्पनी: ${data.counts.total_companies ?? 0}`
+        : `Individual Clients: ${data.counts.total_clients} | Companies: ${data.counts.total_companies ?? 0}`
+    );
 
-    document.getElementById("kpi-cases").textContent = data.counts.total_cases;
-    document.getElementById("kpi-cases-sub").textContent =
+    setText("kpi-cases", data.counts.total_cases);
+    setText(
+      "kpi-cases-sub",
       currentLang === "ne"
         ? `विचाराधीन: ${data.counts.active_cases} | फैसला: ${data.counts.decided_cases}`
-        : `Active: ${data.counts.active_cases} | Decided: ${data.counts.decided_cases}`;
+        : `Active: ${data.counts.active_cases} | Decided: ${data.counts.decided_cases}`
+    );
 
-    document.getElementById("kpi-compliance").textContent = data.counts.pending_compliance_count;
-    document.getElementById("kpi-paid").textContent = fmtNPR(data.financials.total_paid_amount);
-    document.getElementById("kpi-due").textContent =
-      (currentLang === "ne" ? "उठाउन बाँकी: " : "Balance Due: ") + fmtNPR(data.financials.total_due_amount);
+    setText("kpi-compliance", data.counts.pending_compliance_count ?? 0);
+    setText("kpi-paid", fmtNPR(data.financials.total_paid_amount));
+    setText("kpi-due", (currentLang === "ne" ? "उठाउन बाँकी: " : "Balance Due: ") + fmtNPR(data.financials.total_due_amount));
 
     // Render Upcoming Company (OCR, IRD Tax & Audit) Deadlines
     const compBody = document.getElementById("dashboard-compliance-body");
@@ -1158,9 +1167,9 @@ async function loadFinance() {
     apiFetch(`/api/finance/payments?search=${encodeURIComponent(search)}`),
   ]);
 
-  document.getElementById("fin-total-deal").textContent = fmtNPR(summary.total_deal_amount);
-  document.getElementById("fin-total-paid").textContent = fmtNPR(summary.total_paid_amount);
-  document.getElementById("fin-total-due").textContent = fmtNPR(summary.total_due_amount);
+  setText("fin-total-deal", fmtNPR(summary.total_deal_amount));
+  setText("fin-total-paid", fmtNPR(summary.total_paid_amount));
+  setText("fin-total-due", fmtNPR(summary.total_due_amount));
 
   document.getElementById("finance-ledger-body").innerHTML = (summary.case_ledgers || [])
     .map(
@@ -1379,10 +1388,10 @@ async function loadCompanies() {
   ]);
   cachedCompanies = companies;
 
-  document.getElementById("comp-kpi-entities").textContent = summary.counts.total_companies;
-  document.getElementById("comp-kpi-ocr-pending").textContent = summary.counts.ocr_pending;
-  document.getElementById("comp-kpi-ird-pending").textContent = summary.counts.ird_tax_pending;
-  document.getElementById("comp-kpi-audit-pending").textContent = summary.counts.audit_pending;
+  setText("comp-kpi-entities", summary.counts.total_companies);
+  setText("comp-kpi-ocr-pending", summary.counts.ocr_pending);
+  setText("comp-kpi-ird-pending", summary.counts.ird_tax_pending);
+  setText("comp-kpi-audit-pending", summary.counts.audit_pending);
 
   const tbody = document.getElementById("companies-table-body");
   if (!companies.length) {
@@ -2062,14 +2071,16 @@ async function convertAdToBs() {
 }
 
 function openModal(title, htmlContent) {
-  document.getElementById("modal-title").textContent = title;
-  document.getElementById("modal-body").innerHTML = htmlContent;
-  document.getElementById("modal-container").classList.remove("hidden");
+  setText("modal-title", title);
+  const bodyEl = document.getElementById("modal-body");
+  if (bodyEl) bodyEl.innerHTML = htmlContent;
+  document.getElementById("modal-container")?.classList.remove("hidden");
 }
 
 function closeModal() {
-  document.getElementById("modal-container").classList.add("hidden");
-  document.getElementById("modal-body").innerHTML = "";
+  document.getElementById("modal-container")?.classList.add("hidden");
+  const bodyEl = document.getElementById("modal-body");
+  if (bodyEl) bodyEl.innerHTML = "";
 }
 
 // ============================================================================
@@ -2081,7 +2092,7 @@ async function loadFirmSettingsView() {
   applyTenantLovs(bundle.lovs_by_group);
   updateSidebarTenantBranding();
 
-  document.getElementById("settings-tenant-badge").textContent = currentTenant.tenant_code;
+  setText("settings-tenant-badge", currentTenant.tenant_code);
   document.getElementById("tp-name-en").value = currentTenant.firm_name_en || "";
   document.getElementById("tp-name-np").value = currentTenant.firm_name_np || "";
   document.getElementById("tp-pan").value = currentTenant.pan_vat_no || "";
