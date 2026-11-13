@@ -848,7 +848,8 @@ async function loadCases() {
         <span class="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-800">${c.status}</span>
       </td>
       <td class="py-3.5 px-4 text-xs">
-        <div>Deal: <strong>${fmtNPR(c.deal_amount)}</strong></div>
+        <div>लेखन शुल्क: <strong>${fmtNPR(c.mudda_lekhan_sulka || c.deal_amount)}</strong></div>
+        ${c.per_peshi_sulka ? `<div class="text-indigo-700">प्रति पेशी: <strong>${fmtNPR(c.per_peshi_sulka)}</strong></div>` : ""}
         <div class="text-emerald-700">Paid: <strong>${fmtNPR(c.paid_amount)}</strong></div>
         <div class="text-rose-600">Due: <strong>${fmtNPR(c.due_amount)}</strong></div>
       </td>
@@ -953,16 +954,20 @@ function openCaseModal(caseObj = null) {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-emerald-50/60 p-3 rounded-xl border border-emerald-200">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-emerald-50/60 p-3 rounded-xl border border-emerald-200">
         <div>
-          <label class="block text-xs font-bold text-emerald-900 mb-1">Agreed Deal Amount (NPR) *</label>
-          <input type="number" step="0.01" name="deal_amount" required value="${caseObj?.deal_amount ?? 50000}" class="w-full px-3 py-2 border rounded-lg bg-white" />
+          <label class="block text-xs font-bold text-emerald-900 mb-1">मुद्दा लेखन शुल्क (Mudda Lekhan Sulka रु.) *</label>
+          <input type="number" step="0.01" name="mudda_lekhan_sulka" required value="${caseObj ? (caseObj.mudda_lekhan_sulka ?? caseObj.deal_amount ?? 0) : 50000}" class="w-full px-3 py-2 border rounded-lg bg-white" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-indigo-900 mb-1">प्रति पेशी शुल्क (Per Peshi Sulka रु.)</label>
+          <input type="number" step="0.01" name="per_peshi_sulka" value="${caseObj?.per_peshi_sulka ?? 5000}" class="w-full px-3 py-2 border rounded-lg bg-white" />
         </div>
         ${
           !isEdit
             ? `
         <div>
-          <label class="block text-xs font-bold text-emerald-900 mb-1">Initial Paid Advance (NPR)</label>
+          <label class="block text-xs font-bold text-emerald-900 mb-1">पेश्की प्राप्त (Initial Paid रु.)</label>
           <input type="number" step="0.01" name="initial_paid_amount" value="0" class="w-full px-3 py-2 border rounded-lg bg-white" />
         </div>
         <div>
@@ -972,7 +977,7 @@ function openCaseModal(caseObj = null) {
           </select>
         </div>`
             : `
-        <div>
+        <div class="md:col-span-2">
           <label class="block text-xs font-bold text-slate-700 mb-1">Status</label>
           <input type="text" name="status" value="${caseObj?.status || "विचाराधीन (Active)"}" class="w-full px-3 py-2 border rounded-lg bg-white" />
         </div>`
@@ -994,10 +999,14 @@ function openCaseModal(caseObj = null) {
   document.getElementById("case-form").onsubmit = async (e) => {
     e.preventDefault();
     const raw = Object.fromEntries(new FormData(e.target).entries());
+    const lekhanSulka = Number(raw.mudda_lekhan_sulka || 0);
+    const perPeshiSulka = Number(raw.per_peshi_sulka || 0);
     const payload = {
       ...raw,
       client_id: Number(raw.client_id),
-      deal_amount: Number(raw.deal_amount || 0),
+      mudda_lekhan_sulka: lekhanSulka,
+      per_peshi_sulka: perPeshiSulka,
+      deal_amount: lekhanSulka,
       advocate_id: raw.advocate_id ? Number(raw.advocate_id) : null,
       assistant_id: raw.assistant_id ? Number(raw.assistant_id) : null,
     };
@@ -1048,7 +1057,8 @@ async function openCaseDetailModal(caseId) {
           </div>
           <div class="p-3 border rounded-xl bg-emerald-50 border-emerald-200">
             <div class="font-bold text-emerald-900 mb-1">💰 Fee Summary</div>
-            <p>Deal: <strong>${fmtNPR(c.deal_amount)}</strong></p>
+            <p>मुद्दा लेखन शुल्क: <strong>${fmtNPR(c.mudda_lekhan_sulka || c.deal_amount)}</strong></p>
+            <p class="text-indigo-800">प्रति पेशी शुल्क: <strong>${fmtNPR(c.per_peshi_sulka || 0)}</strong></p>
             <p class="text-emerald-700">Paid: <strong>${fmtNPR(c.paid_amount)}</strong></p>
             <p class="text-rose-700">Due: <strong>${fmtNPR(c.due_amount)}</strong></p>
           </div>
@@ -2086,6 +2096,24 @@ function closeModal() {
 // ============================================================================
 // 12. TENANT FIRM SETTINGS & LIST OF VALUES (LOV)
 // ============================================================================
+async function saveTenantProfile(e) {
+  if (e) e.preventDefault();
+  const form = document.getElementById("tenant-profile-form");
+  if (!form) return;
+  const payload = Object.fromEntries(new FormData(form).entries());
+  try {
+    const updated = await apiFetch("/api/tenants/current", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    currentTenant = updated;
+    updateSidebarTenantBranding();
+    showToast("Legal Firm Name, branding & receipt prefix saved!");
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
 async function loadFirmSettingsView() {
   const bundle = await apiFetch("/api/tenants/current");
   currentTenant = bundle.tenant;
@@ -2101,21 +2129,8 @@ async function loadFirmSettingsView() {
   document.getElementById("tp-email").value = currentTenant.email || "";
   document.getElementById("tp-address").value = currentTenant.address || "";
 
-  document.getElementById("tenant-profile-form").onsubmit = async (e) => {
-    e.preventDefault();
-    const payload = Object.fromEntries(new FormData(e.target).entries());
-    try {
-      const updated = await apiFetch("/api/tenants/current", {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
-      currentTenant = updated;
-      updateSidebarTenantBranding();
-      showToast("Firm branding & receipt prefix saved!");
-    } catch (err) {
-      showToast(err.message, true);
-    }
-  };
+  const formEl = document.getElementById("tenant-profile-form");
+  if (formEl) formEl.onsubmit = saveTenantProfile;
 
   await filterLovGroup(selectedLovGroup || "COURT");
 }
@@ -2400,4 +2415,15 @@ function openCreateTenantModal() {
   };
 }
 
-window.addEventListener("DOMContentLoaded", checkSessionOnLoad);
+window.filterLovGroup = filterLovGroup;
+window.openAddLovModal = openAddLovModal;
+window.syncDefaultMdm = syncDefaultMdm;
+window.confirmClearTransactionalData = confirmClearTransactionalData;
+window.deleteLovItem = deleteLovItem;
+window.saveTenantProfile = saveTenantProfile;
+
+window.addEventListener("DOMContentLoaded", () => {
+  const tpForm = document.getElementById("tenant-profile-form");
+  if (tpForm) tpForm.onsubmit = saveTenantProfile;
+  checkSessionOnLoad();
+});

@@ -197,6 +197,10 @@ class LegalCaseBase(BaseModel):
     registration_date_bs: str
     registration_date_ad: Optional[date] = None
     status: str = "विचाराधीन (Active)"
+    mudda_lekhan_sulka: float = 0.0
+    per_peshi_sulka: float = 0.0
+    waris_sulka: float = 0.0
+    court_dastur_sulka: float = 0.0
     deal_amount: float = 0.0
     advocate_id: Optional[int] = None
     assistant_id: Optional[int] = None
@@ -228,6 +232,10 @@ class LegalCaseUpdate(BaseModel):
     registration_date_bs: Optional[str] = None
     registration_date_ad: Optional[date] = None
     status: Optional[str] = None
+    mudda_lekhan_sulka: Optional[float] = None
+    per_peshi_sulka: Optional[float] = None
+    waris_sulka: Optional[float] = None
+    court_dastur_sulka: Optional[float] = None
     deal_amount: Optional[float] = None
     advocate_id: Optional[int] = None
     assistant_id: Optional[int] = None

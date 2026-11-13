@@ -176,6 +176,10 @@ class LegalCase(Base):
 
     status = Column(String(80), nullable=False, default="विचाराधीन (Active)")
 
+    mudda_lekhan_sulka = Column(Float, nullable=False, default=0.0)
+    per_peshi_sulka = Column(Float, nullable=False, default=0.0)
+    waris_sulka = Column(Float, nullable=False, default=0.0)
+    court_dastur_sulka = Column(Float, nullable=False, default=0.0)
     deal_amount = Column(Float, nullable=False, default=0.0)
     paid_amount = Column(Float, nullable=False, default=0.0)
     due_amount = Column(Float, nullable=False, default=0.0)

@@ -103,6 +103,12 @@ def _run_schema_upgrade():
             if "is_superadmin" not in staff_cols:
                 conn.execute(text("ALTER TABLE `staff_members` ADD COLUMN `is_superadmin` BOOLEAN NOT NULL DEFAULT 0"))
 
+        if "legal_cases" in existing_tables:
+            case_cols = [c["name"] for c in inspector.get_columns("legal_cases")]
+            for sulka_col in ["mudda_lekhan_sulka", "per_peshi_sulka", "waris_sulka", "court_dastur_sulka"]:
+                if sulka_col not in case_cols:
+                    conn.execute(text(f"ALTER TABLE `legal_cases` ADD COLUMN `{sulka_col}` FLOAT NOT NULL DEFAULT 0"))
+
         # Drop old single-tenant unique constraints/indexes so multiple tenants can use the same module_key, case_number, etc.
         legacy_unique_cols = {
             "system_module_configs": "module_key",

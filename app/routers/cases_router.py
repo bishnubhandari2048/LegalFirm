@@ -42,6 +42,10 @@ def serialize_case(c: LegalCase, include_details: bool = False) -> dict:
         "registration_date_bs_human": format_bs_human(c.registration_date_bs),
         "registration_date_ad": c.registration_date_ad.isoformat() if c.registration_date_ad else "",
         "status": c.status,
+        "mudda_lekhan_sulka": round(c.mudda_lekhan_sulka or 0.0, 2),
+        "per_peshi_sulka": round(c.per_peshi_sulka or 0.0, 2),
+        "waris_sulka": round(c.waris_sulka or 0.0, 2),
+        "court_dastur_sulka": round(c.court_dastur_sulka or 0.0, 2),
         "deal_amount": round(c.deal_amount or 0.0, 2),
         "paid_amount": round(c.paid_amount or 0.0, 2),
         "due_amount": round(c.due_amount or 0.0, 2),
@@ -201,7 +205,15 @@ def create_case(
     case_title = payload.case_title or f"{client.full_name} विरुद्ध {payload.opponent_name.strip()}"
 
     init_paid = max(0.0, payload.initial_paid_amount or 0.0)
+    lekhan_amt = max(0.0, payload.mudda_lekhan_sulka or 0.0)
+    peshi_amt = max(0.0, payload.per_peshi_sulka or 0.0)
+    waris_amt = max(0.0, payload.waris_sulka or 0.0)
+    court_amt = max(0.0, payload.court_dastur_sulka or 0.0)
     deal_amt = max(0.0, payload.deal_amount or 0.0)
+    if deal_amt == 0.0 and (lekhan_amt > 0 or waris_amt > 0 or court_amt > 0):
+        deal_amt = lekhan_amt + waris_amt + court_amt
+    elif lekhan_amt == 0.0 and deal_amt > 0:
+        lekhan_amt = deal_amt
     due_amt = max(0.0, deal_amt - init_paid)
 
     new_case = LegalCase(
@@ -221,6 +233,10 @@ def create_case(
         registration_date_bs=payload.registration_date_bs.strip(),
         registration_date_ad=reg_ad,
         status=payload.status,
+        mudda_lekhan_sulka=lekhan_amt,
+        per_peshi_sulka=peshi_amt,
+        waris_sulka=waris_amt,
+        court_dastur_sulka=court_amt,
         deal_amount=deal_amt,
         paid_amount=init_paid,
         due_amount=due_amt,
